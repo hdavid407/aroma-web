@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 const RESERVE_URL = "https://calendar.app.google/cpmqknZ47F98bgRA8";
+const assetUrl = (filename: string) =>
+  `${import.meta.env.BASE_URL}assets/${filename}`;
 
 type ArrowProps = {
   className?: string;
@@ -55,7 +57,7 @@ function Header() {
   return (
     <header className="site-header">
       <a className="brand" href="#top" aria-label="Aroma Gastrobar home">
-        <img src="/assets/aroma-logo.png" alt="Aroma Gastrobar" />
+        <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
       </a>
 
       <button
@@ -101,28 +103,28 @@ const experiences = [
     id: "food",
     title: "Food",
     copy: "Bold flavors, rooted in culture.",
-    image: "/assets/food-01.jpg",
+    image: assetUrl("food-01.jpg"),
     href: "https://www.aromagastrobar.com/dinner",
   },
   {
     id: "cocktails",
     title: "Cocktails",
     copy: "Crafted with intention.",
-    image: "/assets/drinks-01.jpg",
+    image: assetUrl("drinks-01.jpg"),
     href: "https://www.aromagastrobar.com/drinks",
   },
   {
     id: "brunch",
     title: "Brunch",
     copy: "Weekends done right.",
-    image: "/assets/brunch-01.jpg",
+    image: assetUrl("brunch-01.jpg"),
     href: "#visit",
   },
   {
     id: "after-dark",
     title: "After dark",
     copy: "Music. Drinks. Vibes.",
-    image: "/assets/lounge-01.jpg",
+    image: assetUrl("lounge-01.jpg"),
     href: "#reserve",
   },
 ];
@@ -170,7 +172,13 @@ function Experiences() {
 function Reservation() {
   return (
     <section className="reservation" id="reserve">
-      <div className="reservation-photo" aria-hidden="true" />
+      <div
+        className="reservation-photo"
+        style={{
+          backgroundImage: `url("${assetUrl("lounge-01.jpg")}")`,
+        }}
+        aria-hidden="true"
+      />
       <div className="reservation-content section-pad">
         <h2>
           The night
@@ -227,7 +235,7 @@ function Footer() {
 
       <div className="footer-bottom">
         <a className="footer-brand" href="#top" aria-label="Back to top">
-          <img src="/assets/aroma-logo.png" alt="Aroma Gastrobar" />
+          <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
         </a>
         <div className="social-links">
           <a
@@ -261,7 +269,13 @@ export default function App() {
     <main>
       <section className="hero" id="top">
         <Header />
-        <div className="hero-image" aria-hidden="true" />
+        <div
+          className="hero-image"
+          style={{
+            backgroundImage: `url("${assetUrl("hero-entrance-v2.png")}")`,
+          }}
+          aria-hidden="true"
+        />
         <div className="hero-shade" aria-hidden="true" />
         <div className="hero-content">
           <h1>
