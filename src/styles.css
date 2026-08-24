@@ -239,28 +239,28 @@ a:focus-visible {
 
 @media (min-width: 681px) {
   .glitter-spark {
-    width: clamp(0.65rem, 1.05vw, 1.1rem);
+    width: clamp(0.48rem, 0.75vw, 0.8rem);
     filter:
-      drop-shadow(0 0 0.55rem var(--neon))
-      drop-shadow(0 0 1.25rem rgba(255, 240, 138, 0.48));
+      drop-shadow(0 0 0.28rem rgba(255, 251, 225, 0.92))
+      drop-shadow(0 0 0.62rem rgba(255, 240, 138, 0.24));
   }
 
   .glitter-spark::before {
-    inset: -155%;
+    inset: -92%;
     background: radial-gradient(
       circle,
-      rgba(255, 249, 198, 0.62) 0 14%,
-      rgba(255, 240, 138, 0.38) 32%,
-      rgba(255, 240, 138, 0.18) 52%,
-      transparent 76%
+      rgba(255, 249, 198, 0.5) 0 10%,
+      rgba(255, 240, 138, 0.28) 27%,
+      rgba(255, 240, 138, 0.1) 46%,
+      transparent 68%
     );
-    filter: blur(0.3rem);
+    filter: blur(0.16rem);
   }
 
   .glitter-spark-1,
   .glitter-spark-3,
   .glitter-spark-8 {
-    width: clamp(0.72rem, 1.15vw, 1.15rem);
+    width: clamp(0.54rem, 0.84vw, 0.88rem);
   }
 
   .glitter-spark-2,
@@ -268,12 +268,12 @@ a:focus-visible {
   .glitter-spark-5,
   .glitter-spark-7,
   .glitter-spark-9 {
-    width: clamp(0.58rem, 0.88vw, 0.88rem);
+    width: clamp(0.38rem, 0.6vw, 0.64rem);
   }
 
   .glitter-spark-6,
   .glitter-spark-10 {
-    width: clamp(0.64rem, 0.96vw, 0.96rem);
+    width: clamp(0.44rem, 0.68vw, 0.72rem);
   }
 }
 
@@ -782,6 +782,20 @@ a:focus-visible {
   }
 }
 
+@keyframes glitter-reduced-glow {
+  0%,
+  42%,
+  100% {
+    opacity: 0.04;
+  }
+  58% {
+    opacity: 0.68;
+  }
+  72% {
+    opacity: 0.14;
+  }
+}
+
 @keyframes scroll-pulse {
   0%,
   100% {
@@ -1105,8 +1119,11 @@ a:focus-visible {
   }
 
   .glitter-spark {
-    animation: none !important;
-    opacity: 0.42;
-    transform: scale(0.7);
+    animation-name: glitter-reduced-glow !important;
+    animation-duration: calc(var(--spark-duration) + 1.6s) !important;
+    animation-iteration-count: infinite !important;
+    animation-timing-function: ease-in-out !important;
+    opacity: 0.04;
+    transform: scale(0.72);
   }
 }
