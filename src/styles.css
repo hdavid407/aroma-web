@@ -237,6 +237,33 @@ a:focus-visible {
   animation-delay: -4s;
 }
 
+@media (min-width: 681px) {
+  .glitter-spark {
+    filter:
+      drop-shadow(0 0 0.45rem var(--neon))
+      drop-shadow(0 0 1rem rgba(255, 240, 138, 0.34));
+  }
+
+  .glitter-spark-1,
+  .glitter-spark-3,
+  .glitter-spark-8 {
+    width: clamp(0.58rem, 0.88vw, 0.9rem);
+  }
+
+  .glitter-spark-2,
+  .glitter-spark-4,
+  .glitter-spark-5,
+  .glitter-spark-7,
+  .glitter-spark-9 {
+    width: clamp(0.44rem, 0.68vw, 0.7rem);
+  }
+
+  .glitter-spark-6,
+  .glitter-spark-10 {
+    width: clamp(0.5rem, 0.76vw, 0.78rem);
+  }
+}
+
 .site-header {
   position: absolute;
   z-index: 20;
