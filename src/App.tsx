@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const RESERVE_URL = "https://calendar.app.google/cpmqknZ47F98bgRA8";
 const assetUrl = (filename: string) =>
@@ -265,9 +265,30 @@ function Footer() {
 }
 
 export default function App() {
+  const heroRef = useRef<HTMLElement>(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    const hero = heroRef.current;
+
+    if (!hero || !("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setHeroVisible(entry.isIntersecting),
+      { threshold: 0.08 },
+    );
+
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <main>
-      <section className="hero" id="top">
+      <section
+        ref={heroRef}
+        className={heroVisible ? "hero is-visible" : "hero"}
+        id="top"
+      >
         <Header />
         <div
           className="hero-image"
@@ -277,6 +298,18 @@ export default function App() {
           aria-hidden="true"
         />
         <div className="hero-shade" aria-hidden="true" />
+        <div className="hero-glitter" aria-hidden="true">
+          <span className="glitter-spark glitter-spark-1" />
+          <span className="glitter-spark glitter-spark-2" />
+          <span className="glitter-spark glitter-spark-3" />
+          <span className="glitter-spark glitter-spark-4" />
+          <span className="glitter-spark glitter-spark-5" />
+          <span className="glitter-spark glitter-spark-6" />
+          <span className="glitter-spark glitter-spark-7" />
+          <span className="glitter-spark glitter-spark-8" />
+          <span className="glitter-spark glitter-spark-9" />
+          <span className="glitter-spark glitter-spark-10" />
+        </div>
         <div className="hero-content">
           <h1>
             Dominican roots.
