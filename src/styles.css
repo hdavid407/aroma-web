@@ -239,15 +239,28 @@ a:focus-visible {
 
 @media (min-width: 681px) {
   .glitter-spark {
+    width: clamp(0.65rem, 1.05vw, 1.1rem);
     filter:
-      drop-shadow(0 0 0.45rem var(--neon))
-      drop-shadow(0 0 1rem rgba(255, 240, 138, 0.34));
+      drop-shadow(0 0 0.55rem var(--neon))
+      drop-shadow(0 0 1.25rem rgba(255, 240, 138, 0.48));
+  }
+
+  .glitter-spark::before {
+    inset: -155%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 249, 198, 0.62) 0 14%,
+      rgba(255, 240, 138, 0.38) 32%,
+      rgba(255, 240, 138, 0.18) 52%,
+      transparent 76%
+    );
+    filter: blur(0.3rem);
   }
 
   .glitter-spark-1,
   .glitter-spark-3,
   .glitter-spark-8 {
-    width: clamp(0.58rem, 0.88vw, 0.9rem);
+    width: clamp(0.72rem, 1.15vw, 1.15rem);
   }
 
   .glitter-spark-2,
@@ -255,12 +268,12 @@ a:focus-visible {
   .glitter-spark-5,
   .glitter-spark-7,
   .glitter-spark-9 {
-    width: clamp(0.44rem, 0.68vw, 0.7rem);
+    width: clamp(0.58rem, 0.88vw, 0.88rem);
   }
 
   .glitter-spark-6,
   .glitter-spark-10 {
-    width: clamp(0.5rem, 0.76vw, 0.78rem);
+    width: clamp(0.64rem, 0.96vw, 0.96rem);
   }
 }
 
