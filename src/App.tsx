@@ -509,7 +509,7 @@ function filterUpcomingEvents(events: EventRecord[]) {
     }
 
     const activeUntil = event.endIso ?? event.startIso;
-    return new Date(activeUntil).getTime() >= now.getTime();
+    return new Date(activeUntil).getTime() > now.getTime();
   });
 }
 
@@ -527,8 +527,14 @@ function EventList({ events }: EventListProps) {
       ) : (
         <div className="event-list">
           {upcomingEvents.map((event) => (
-            <article className="event-card" key={event.id}>
-              <span className="event-date">{event.displayDate}</span>
+            <article
+              className="event-card"
+              data-event-id={event.id}
+              data-event-start={event.startIso}
+              data-event-end={event.endIso}
+              key={event.id}
+            >
+              <time className="event-date" dateTime={event.startIso}>{event.displayDate}</time>
               <h3>{event.title}</h3>
               <p className="event-time">{event.timeLabel}</p>
               <p>{event.summary}</p>

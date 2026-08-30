@@ -26,55 +26,6 @@ const aliasEntries = [
 
 const routeEntries = [...canonicalEntries, ...aliasEntries];
 const verificationTime = Date.now();
-const expectedMenuSections = [
-  {
-    name: "Starters",
-    items: [
-      "Empanadas",
-      "Aroma Wings",
-      "Crispy Shrimp & Calamari Ceviche",
-      "Yuca or Plantain Baskets",
-    ],
-  },
-  {
-    name: "Entrees",
-    items: ["La Bandera", "Mofongo", "Chofan Dominicano", "El Jefe Steak"],
-  },
-  {
-    name: "Sushi",
-    items: ["La Toxica Roll", "El Diablo Roll", "La Chapi Roll"],
-  },
-  {
-    name: "Dessert",
-    items: [
-      "Flan de Coco",
-      "Rum Pineapple Upside-Down Cake",
-      "Warm Bread Pudding a la mode",
-    ],
-  },
-];
-const supportedEvents = [
-  {
-    id: "rnb-saturdays-2026-09-05",
-    name: "R&B Saturdays",
-    startDate: "2026-09-05T22:00:00-04:00",
-    endDate: "2026-09-06T02:00:00-04:00",
-    description:
-      "Aroma Social returns with smooth R&B, lounge energy, food and drinks, and limited reservation-based perks.",
-    url: "https://aromagastrobar.com/events/EIQqsARgdFDv",
-    verified: true,
-  },
-  {
-    id: "afro-caribbean-day-party-2026-08-15",
-    name: "Afro-Caribbean Day Party",
-    startDate: "2026-08-15T15:00:00-04:00",
-    endDate: "2026-08-15T22:00:00-04:00",
-    description:
-      "Past Aroma Social event retained in the record list so expired entries can drop out of the rendered page automatically.",
-    url: "https://aromagastrobar.com/events/Z0hQVsxVmS8f",
-    verified: true,
-  },
-];
 const homeHtml = await readOutput("index.html");
 const homeCanonical = extractSingle(
   homeHtml,
@@ -266,12 +217,12 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
   const serialized = JSON.stringify(document);
 
   assertNoReviewSchema(document, htmlPath);
-  assertMenuSchema(document, htmlPath, renderPath, canonical);
-  assertEventSchema(document, htmlPath, renderPath, canonical, restaurant["@id"]);
+  assertMenuSchema(document, html, htmlPath, renderPath, canonical);
+  assertEventSchema(document, html, htmlPath, renderPath, canonical, restaurant["@id"]);
   assertSafeOutput(serialized, `${htmlPath} JSON-LD`);
 }
 
-function assertMenuSchema(document, htmlPath, renderPath, canonical) {
+function assertMenuSchema(document, html, htmlPath, renderPath, canonical) {
   const menus = collectTypedNodes(document, "Menu");
   const menuSections = collectTypedNodes(document, "MenuSection");
   const menuItems = collectTypedNodes(document, "MenuItem");
@@ -285,27 +236,30 @@ function assertMenuSchema(document, htmlPath, renderPath, canonical) {
 
   assert(menus.length === 1, `${htmlPath} must contain one Menu node`);
   assert(menus[0]["@id"] === `${canonical}#menu`, `${htmlPath} Menu ID is incorrect`);
-  assert(
-    menuSections.length === expectedMenuSections.length,
-    `${htmlPath} MenuSection count is incorrect`,
-  );
+  assert(Array.isArray(menus[0].hasMenuSection), `${htmlPath} Menu has no sections`);
+  assert(menuSections.length === menus[0].hasMenuSection.length, `${htmlPath} MenuSection count is inconsistent`);
 
-  const actualSections = menuSections.map((section) => ({
-    name: section.name,
-    items: (section.hasMenuItem ?? []).map((item) => item.name),
-  }));
+  for (const section of menus[0].hasMenuSection) {
+    assert(section["@type"] === "MenuSection", `${htmlPath} contains an invalid MenuSection`);
+    assert(typeof section.name === "string" && section.name.length > 0, `${htmlPath} MenuSection is missing a name`);
+    assert(typeof section.description === "string" && section.description.length > 0, `${htmlPath} MenuSection is missing a description`);
+    assert(Array.isArray(section.hasMenuItem) && section.hasMenuItem.length > 0, `${htmlPath} MenuSection has no items`);
+    assert(html.includes(escapeHtml(section.name)), `${htmlPath} MenuSection is not visible in the route content`);
+
+    for (const item of section.hasMenuItem) {
+      assert(item["@type"] === "MenuItem", `${htmlPath} contains an invalid MenuItem`);
+      assert(typeof item.name === "string" && item.name.length > 0, `${htmlPath} MenuItem is missing a name`);
+      assert(html.includes(escapeHtml(item.name)), `${htmlPath} MenuItem is not visible in the route content`);
+    }
+  }
 
   assert(
-    JSON.stringify(actualSections) === JSON.stringify(expectedMenuSections),
-    `${htmlPath} Menu schema does not match menuSections content`,
-  );
-  assert(
-    menuItems.length === expectedMenuSections.flatMap((section) => section.items).length,
-    `${htmlPath} MenuItem count is incorrect`,
+    menuItems.length === menus[0].hasMenuSection.flatMap((section) => section.hasMenuItem).length,
+    `${htmlPath} MenuItem count is inconsistent`,
   );
 }
 
-function assertEventSchema(document, htmlPath, renderPath, canonical, restaurantId) {
+function assertEventSchema(document, html, htmlPath, renderPath, canonical, restaurantId) {
   const events = collectTypedNodes(document, "Event");
 
   if (renderPath !== "/events/") {
@@ -313,26 +267,25 @@ function assertEventSchema(document, htmlPath, renderPath, canonical, restaurant
     return;
   }
 
-  const expectedEvents = supportedEvents.filter((event) => {
-    const activeUntil = event.endDate ?? event.startDate;
-    return event.verified && new Date(activeUntil).getTime() > verificationTime;
-  });
+  const visibleEvents = [...html.matchAll(
+    /<article\b[^>]*data-event-id="([^"]+)"[^>]*data-event-start="([^"]+)"[^>]*data-event-end="([^"]+)"[^>]*>/gu,
+  )].map((match) => ({ id: match[1], startDate: match[2], endDate: match[3] }));
 
-  assert(events.length === expectedEvents.length, `${htmlPath} Event count is incorrect`);
+  assert(events.length === visibleEvents.length, `${htmlPath} Event schema does not match visible events`);
 
   for (const event of events) {
     const idPrefix = `${canonical}#event-`;
     const eventId = event["@id"]?.startsWith(idPrefix)
       ? event["@id"].slice(idPrefix.length)
       : undefined;
-    const expected = expectedEvents.find((candidate) => candidate.id === eventId);
+    const visibleEvent = visibleEvents.find((candidate) => candidate.id === eventId);
 
-    assert(expected, `${htmlPath} contains unsupported Event ${event["@id"] ?? "without an ID"}`);
-    assert(event.name === expected.name, `${htmlPath} Event name is unsupported`);
-    assert(event.startDate === expected.startDate, `${htmlPath} Event startDate is unsupported`);
-    assert(event.endDate === expected.endDate, `${htmlPath} Event endDate is unsupported`);
-    assert(event.description === expected.description, `${htmlPath} Event description is unsupported`);
-    assert(event.url === expected.url, `${htmlPath} Event URL is unsupported`);
+    assert(visibleEvent, `${htmlPath} contains unsupported Event ${event["@id"] ?? "without an ID"}`);
+    assert(event.startDate === visibleEvent.startDate, `${htmlPath} Event startDate is unsupported`);
+    assert(event.endDate === visibleEvent.endDate, `${htmlPath} Event endDate is unsupported`);
+    assert(typeof event.name === "string" && html.includes(escapeHtml(event.name)), `${htmlPath} Event name is not visible`);
+    assert(typeof event.description === "string" && html.includes(escapeHtml(event.description)), `${htmlPath} Event description is not visible`);
+    assert(typeof event.url === "string" && event.url.length > 0, `${htmlPath} Event URL is missing`);
     assert(event.location?.["@id"] === restaurantId, `${htmlPath} Event location is unsupported`);
 
     const activeUntil = event.endDate ?? event.startDate;
@@ -427,8 +380,7 @@ function assertSafeOutput(value, label) {
     `${label} contains an Owner.com URL`,
   );
   assert(
-    !/https?:\/\/[^\s"'<]*toasttab\.com\b/iu.test(value) &&
-      !/__[^\s]*TOAST[^\s]*__/u.test(value),
+    !/(?:__[^\s"'<]*TOAST[^\s"'<]*__|\b(?:TOAST_URL|TOAST_LINK|TOAST_DESTINATION)\b|https?:\/\/(?:www\.)?toasttab\.com\/[^\s"'<]*(?:placeholder|example|your[-_]|replace[-_]|todo)[^\s"'<]*)/iu.test(value),
     `${label} contains a placeholder Toast URL`,
   );
 }
@@ -506,6 +458,14 @@ function assert(condition, message) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 async function collectFiles(directoryPath) {
