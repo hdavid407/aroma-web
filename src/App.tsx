@@ -104,6 +104,7 @@ const experiences = [
     title: "Food",
     copy: "Bold flavors, rooted in culture.",
     image: assetUrl("food-01.jpg"),
+    alt: "A spread of flavorful dishes and wings",
     href: "https://www.aromagastrobar.com/dinner",
   },
   {
@@ -111,6 +112,7 @@ const experiences = [
     title: "Cocktails",
     copy: "Crafted with intention.",
     image: assetUrl("drinks-01.jpg"),
+    alt: "A chili-rimmed cocktail with lime",
     href: "https://www.aromagastrobar.com/drinks",
   },
   {
@@ -118,6 +120,7 @@ const experiences = [
     title: "Brunch",
     copy: "Weekends done right.",
     image: assetUrl("brunch-01.jpg"),
+    alt: "French toast topped with strawberries and blueberries",
     href: "#visit",
   },
   {
@@ -125,6 +128,7 @@ const experiences = [
     title: "After dark",
     copy: "Music. Drinks. Vibes.",
     image: assetUrl("lounge-01.jpg"),
+    alt: "Guests enjoying cocktails in the lounge",
     href: "#reserve",
   },
 ];
@@ -153,7 +157,7 @@ function Experiences() {
             key={item.title}
           >
             <div className="experience-image">
-              <img src={item.image} alt="" />
+              <img src={item.image} alt={item.alt} />
             </div>
             <div className="experience-copy">
               <div>
