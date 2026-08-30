@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   businessProfile,
   type EventRecord,
@@ -9,29 +16,27 @@ import {
   resolveRoute,
 } from "./siteContent";
 
-const assetUrl = (filename: string) =>
-  `${import.meta.env.BASE_URL}assets/${filename}`;
+const BasePathContext = createContext("/");
 
-const routeHref = (path: string) => {
-  const basePath = import.meta.env.BASE_URL;
+const useBasePath = () => useContext(BasePathContext);
+
+const assetUrl = (basePath: string, filename: string) =>
+  `${basePath}assets/${filename}`;
+
+const routeHref = (basePath: string, path: string) => {
   const trimmedPath = path.startsWith("/") ? path.slice(1) : path;
 
   return `${basePath}${trimmedPath}`;
 };
 
-const homeAnchors = {
-  brunch: `${routeHref("/menu/")}#brunch-menu`,
-  afterDark: routeHref("/events/"),
-};
-
-const EXPERIENCE_CARDS = [
+const getExperienceCards = (basePath: string) => [
   {
     id: "food",
     title: "Food",
     copy: "Bold flavors, rooted in culture.",
     image: "food-01.jpg",
     alt: "A spread of flavorful dishes and wings",
-    href: routeHref("/menu/"),
+    href: routeHref(basePath, "/menu/"),
     analytics: "menu-experience-food",
   },
   {
@@ -40,7 +45,7 @@ const EXPERIENCE_CARDS = [
     copy: "Crafted with intention.",
     image: "drinks-01.jpg",
     alt: "A chili-rimmed cocktail with lime",
-    href: routeHref("/menu/"),
+    href: routeHref(basePath, "/menu/"),
     analytics: "menu-experience-cocktails",
   },
   {
@@ -49,7 +54,7 @@ const EXPERIENCE_CARDS = [
     copy: "Weekends done right.",
     image: "brunch-01.jpg",
     alt: "French toast topped with strawberries and blueberries",
-    href: `${routeHref("/menu/")}#brunch-menu`,
+    href: `${routeHref(basePath, "/menu/")}#brunch-menu`,
     analytics: "menu-experience-brunch",
   },
   {
@@ -58,10 +63,10 @@ const EXPERIENCE_CARDS = [
     copy: "Music. Drinks. Vibes.",
     image: "lounge-01.jpg",
     alt: "Guests enjoying cocktails in the lounge",
-    href: routeHref("/events/"),
+    href: routeHref(basePath, "/events/"),
     analytics: "menu-experience-events",
   },
-];
+] as const;
 
 const GLITTER_SPARKS = Array.from({ length: 10 }, (_, index) => index + 1);
 
@@ -71,6 +76,7 @@ type ArrowProps = {
 
 type AppProps = {
   routePath: string;
+  basePath?: string;
 };
 
 type HeaderProps = {
@@ -149,7 +155,15 @@ function TikTokIcon() {
 }
 
 function Header({ isHome }: HeaderProps) {
+  const basePath = useBasePath();
   const [menuOpen, setMenuOpen] = useState(false);
+  const homeAnchors = useMemo(
+    () => ({
+      brunch: `${routeHref(basePath, "/menu/")}#brunch-menu`,
+      afterDark: routeHref(basePath, "/events/"),
+    }),
+    [basePath],
+  );
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", menuOpen);
@@ -157,12 +171,12 @@ function Header({ isHome }: HeaderProps) {
   }, [menuOpen]);
 
   const closeMenu = () => setMenuOpen(false);
-  const brandHref = isHome ? "#top" : routeHref("/");
+  const brandHref = isHome ? "#top" : routeHref(basePath, "/");
 
   return (
     <header className="site-header">
       <a className="brand" href={brandHref} aria-label="Aroma Gastrobar home">
-        <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
+        <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastrobar" />
       </a>
 
       <button
@@ -177,7 +191,7 @@ function Header({ isHome }: HeaderProps) {
       </button>
 
       <nav className={menuOpen ? "nav is-open" : "nav"} aria-label="Main navigation">
-        <a href={routeHref("/menu/")} data-analytics="menu-nav" onClick={closeMenu}>
+        <a href={routeHref(basePath, "/menu/")} data-analytics="menu-nav" onClick={closeMenu}>
           Menu
         </a>
         <a href={homeAnchors.brunch} data-analytics="menu-brunch-nav" onClick={closeMenu}>
@@ -190,7 +204,7 @@ function Header({ isHome }: HeaderProps) {
         >
           After dark
         </a>
-        <a href={routeHref("/contact/")} onClick={closeMenu}>
+        <a href={routeHref(basePath, "/contact/")} onClick={closeMenu}>
           Contact
         </a>
         <a
@@ -209,6 +223,8 @@ function Header({ isHome }: HeaderProps) {
 }
 
 function Experiences() {
+  const basePath = useBasePath();
+
   return (
     <section className="experiences section-pad" id="experiences">
       <div className="section-intro">
@@ -224,7 +240,7 @@ function Experiences() {
       </div>
 
       <div className="experience-rail">
-        {EXPERIENCE_CARDS.map((item, index) => (
+        {getExperienceCards(basePath).map((item, index) => (
           <a
             className={`experience experience-${index + 1}`}
             id={item.id}
@@ -233,7 +249,7 @@ function Experiences() {
             data-analytics={item.analytics}
           >
             <div className="experience-image">
-              <img src={assetUrl(item.image)} alt={item.alt} />
+              <img src={assetUrl(basePath, item.image)} alt={item.alt} />
             </div>
             <div className="experience-copy">
               <div>
@@ -250,12 +266,14 @@ function Experiences() {
 }
 
 function Reservation() {
+  const basePath = useBasePath();
+
   return (
     <section className="reservation" id="reserve">
       <div
         className="reservation-photo"
         style={{
-          backgroundImage: `url("${assetUrl("lounge-01.jpg")}")`,
+          backgroundImage: `url("${assetUrl(basePath, "lounge-01.jpg")}")`,
         }}
         aria-hidden="true"
       />
@@ -292,6 +310,8 @@ function Reservation() {
 }
 
 function Footer() {
+  const basePath = useBasePath();
+
   return (
     <footer className="footer section-pad" id="visit">
       <div className="visit-grid">
@@ -316,8 +336,12 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <a className="footer-brand" href={routeHref("/")} aria-label="Back to top">
-          <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
+        <a
+          className="footer-brand"
+          href={routeHref(basePath, "/")}
+          aria-label="Back to top"
+        >
+          <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastrobar" />
         </a>
         <div className="social-links">
           {businessProfile.socialLinks.map((socialLink) => (
@@ -337,6 +361,7 @@ function Footer() {
 }
 
 function RouteAction({ action, variant = "primary" }: RouteActionProps) {
+  const basePath = useBasePath();
   const className =
     variant === "text"
       ? "text-link"
@@ -347,7 +372,7 @@ function RouteAction({ action, variant = "primary" }: RouteActionProps) {
   return (
     <a
       className={className}
-      href={action.href.startsWith("/") ? routeHref(action.href) : action.href}
+      href={action.href.startsWith("/") ? routeHref(basePath, action.href) : action.href}
       target={action.external ? "_blank" : undefined}
       rel={action.external ? "noreferrer" : undefined}
       data-analytics={action.analytics}
@@ -358,12 +383,16 @@ function RouteAction({ action, variant = "primary" }: RouteActionProps) {
 }
 
 function PageHero({ route }: PageHeroProps) {
+  const basePath = useBasePath();
+
   return (
     <section className="page-hero" id="top">
       <Header isHome={false} />
       <div
         className="page-hero-image"
-        style={{ backgroundImage: `url("${assetUrl(route.meta.heroImage)}")` }}
+        style={{
+          backgroundImage: `url("${assetUrl(basePath, route.meta.heroImage)}")`,
+        }}
         aria-hidden="true"
       />
       <div className="page-hero-shade" aria-hidden="true" />
@@ -575,12 +604,14 @@ function ContactDetails({ route }: { route: RouteDefinition }) {
 }
 
 function GalleryGrid({ items }: GalleryGridProps) {
+  const basePath = useBasePath();
+
   return (
     <section className="route-card">
       <div className="gallery-grid">
         {items.map((item) => (
           <figure className="gallery-item" key={item.image}>
-            <img src={assetUrl(item.image)} alt={item.alt} />
+            <img src={assetUrl(basePath, item.image)} alt={item.alt} />
             <figcaption>{item.caption}</figcaption>
           </figure>
         ))}
@@ -629,6 +660,7 @@ function GenericRoutePage({ route }: { route: RouteDefinition }) {
 }
 
 function HomePage() {
+  const basePath = useBasePath();
   const heroRef = useRef<HTMLElement>(null);
   const [heroVisible, setHeroVisible] = useState(true);
 
@@ -659,7 +691,7 @@ function HomePage() {
         <div
           className="hero-image"
           style={{
-            backgroundImage: `url("${assetUrl("hero-entrance-v2.png")}")`,
+            backgroundImage: `url("${assetUrl(basePath, "hero-entrance-v2.png")}")`,
           }}
           aria-hidden="true"
         />
@@ -689,7 +721,11 @@ function HomePage() {
             >
               Reserve a table
             </a>
-            <a className="button button-outline" href={routeHref("/menu/")} data-analytics="menu-hero">
+            <a
+              className="button button-outline"
+              href={routeHref(basePath, "/menu/")}
+              data-analytics="menu-hero"
+            >
               Explore the menu
             </a>
           </div>
@@ -709,10 +745,10 @@ function HomePage() {
   );
 }
 
-export default function App({ routePath }: AppProps) {
+export default function App({ routePath, basePath = "/" }: AppProps) {
   const route = useMemo(
-    () => resolveRoute(routePath, import.meta.env.BASE_URL),
-    [routePath],
+    () => resolveRoute(routePath, basePath),
+    [basePath, routePath],
   );
 
   useEffect(() => {
@@ -727,8 +763,16 @@ export default function App({ routePath }: AppProps) {
   }, [route.id]);
 
   if (route.id === "home") {
-    return <HomePage />;
+    return (
+      <BasePathContext.Provider value={basePath}>
+        <HomePage />
+      </BasePathContext.Provider>
+    );
   }
 
-  return <GenericRoutePage route={route} />;
+  return (
+    <BasePathContext.Provider value={basePath}>
+      <GenericRoutePage route={route} />
+    </BasePathContext.Provider>
+  );
 }
