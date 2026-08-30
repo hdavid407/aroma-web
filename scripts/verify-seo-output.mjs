@@ -25,6 +25,56 @@ const aliasEntries = [
 ];
 
 const routeEntries = [...canonicalEntries, ...aliasEntries];
+const verificationTime = Date.now();
+const expectedMenuSections = [
+  {
+    name: "Starters",
+    items: [
+      "Empanadas",
+      "Aroma Wings",
+      "Crispy Shrimp & Calamari Ceviche",
+      "Yuca or Plantain Baskets",
+    ],
+  },
+  {
+    name: "Entrees",
+    items: ["La Bandera", "Mofongo", "Chofan Dominicano", "El Jefe Steak"],
+  },
+  {
+    name: "Sushi",
+    items: ["La Toxica Roll", "El Diablo Roll", "La Chapi Roll"],
+  },
+  {
+    name: "Dessert",
+    items: [
+      "Flan de Coco",
+      "Rum Pineapple Upside-Down Cake",
+      "Warm Bread Pudding a la mode",
+    ],
+  },
+];
+const supportedEvents = [
+  {
+    id: "rnb-saturdays-2026-09-05",
+    name: "R&B Saturdays",
+    startDate: "2026-09-05T22:00:00-04:00",
+    endDate: "2026-09-06T02:00:00-04:00",
+    description:
+      "Aroma Social returns with smooth R&B, lounge energy, food and drinks, and limited reservation-based perks.",
+    url: "https://aromagastrobar.com/events/EIQqsARgdFDv",
+    verified: true,
+  },
+  {
+    id: "afro-caribbean-day-party-2026-08-15",
+    name: "Afro-Caribbean Day Party",
+    startDate: "2026-08-15T15:00:00-04:00",
+    endDate: "2026-08-15T22:00:00-04:00",
+    description:
+      "Past Aroma Social event retained in the record list so expired entries can drop out of the rendered page automatically.",
+    url: "https://aromagastrobar.com/events/Z0hQVsxVmS8f",
+    verified: true,
+  },
+];
 const homeHtml = await readOutput("index.html");
 const homeCanonical = extractSingle(
   homeHtml,
@@ -48,6 +98,7 @@ for (const [entryPath, renderPath, htmlPath] of routeEntries) {
 
   assert(!html.includes("route-head"), `${htmlPath} retains the route-head marker`);
   assert(!html.includes("__AROMA_"), `${htmlPath} retains a build placeholder`);
+  assertSafeOutput(html, htmlPath);
 
   const root = html.match(/<div\b(?=[^>]*\bid="root")(?<attributes>[^>]*)>/u);
 
@@ -80,7 +131,7 @@ for (const [entryPath, renderPath, htmlPath] of routeEntries) {
 
   assert(canonical === expectedCanonical, `${htmlPath} canonical is ${canonical}`);
   assertMetadata(html, htmlPath, title, description, canonical);
-  assertStructuredData(html, htmlPath, canonical, homeCanonical);
+  assertStructuredData(html, htmlPath, renderPath, canonical, homeCanonical);
 
   const metadata = { title, description, canonical };
 
@@ -107,6 +158,7 @@ assertUnique(
 );
 
 await assertFallback(basePath, `${homeCanonical}menu/`);
+await assertCrawlFiles(homeCanonical);
 await assertHtmlFileCount(routeEntries.length + 1);
 await assertSsrBundleRemoved();
 
@@ -130,9 +182,28 @@ function assertMetadata(html, htmlPath, title, description, canonical) {
   for (const [pattern, label] of expected) {
     extractSingle(html, pattern, `${htmlPath} ${label}`);
   }
+
+  const robots = extractSingle(
+    html,
+    /<meta name="robots" content="([^"]+)"/gu,
+    `${htmlPath} robots directive`,
+  );
+  const ogImage = extractSingle(
+    html,
+    /<meta property="og:image" content="([^"]+)"/gu,
+    `${htmlPath} Open Graph image`,
+  );
+  const twitterImage = extractSingle(
+    html,
+    /<meta name="twitter:image" content="([^"]+)"/gu,
+    `${htmlPath} Twitter image`,
+  );
+
+  assert(!/\bnoindex\b/iu.test(robots), `${htmlPath} canonical output is noindex`);
+  assert(twitterImage === ogImage, `${htmlPath} social images do not match`);
 }
 
-function assertStructuredData(html, htmlPath, canonical, siteHome) {
+function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
   const jsonText = extractSingle(
     html,
     /<script type="application\/ld\+json">([\s\S]*?)<\/script>/gu,
@@ -153,6 +224,11 @@ function assertStructuredData(html, htmlPath, canonical, siteHome) {
 
   assert(restaurant, `${htmlPath} is missing the Restaurant/LocalBusiness node`);
   assert(webPage?.url === canonical, `${htmlPath} WebPage URL does not match its canonical`);
+  assert(restaurant.telephone === "+14072379661", `${htmlPath} telephone is unsupported`);
+  assert(
+    JSON.stringify(restaurant.servesCuisine) === JSON.stringify(["Dominican", "Latin fusion"]),
+    `${htmlPath} cuisine data is unsupported`,
+  );
 
   for (const field of [
     "name",
@@ -189,8 +265,172 @@ function assertStructuredData(html, htmlPath, canonical, siteHome) {
 
   const serialized = JSON.stringify(document);
 
-  assert(!serialized.includes("aggregateRating"), `${htmlPath} contains aggregateRating`);
+  assertNoReviewSchema(document, htmlPath);
+  assertMenuSchema(document, htmlPath, renderPath, canonical);
+  assertEventSchema(document, htmlPath, renderPath, canonical, restaurant["@id"]);
+  assertSafeOutput(serialized, `${htmlPath} JSON-LD`);
+}
+
+function assertMenuSchema(document, htmlPath, renderPath, canonical) {
+  const menus = collectTypedNodes(document, "Menu");
+  const menuSections = collectTypedNodes(document, "MenuSection");
+  const menuItems = collectTypedNodes(document, "MenuItem");
+
+  if (renderPath !== "/menu/") {
+    assert(menus.length === 0, `${htmlPath} contains unsupported Menu schema`);
+    assert(menuSections.length === 0, `${htmlPath} contains unsupported MenuSection schema`);
+    assert(menuItems.length === 0, `${htmlPath} contains unsupported MenuItem schema`);
+    return;
+  }
+
+  assert(menus.length === 1, `${htmlPath} must contain one Menu node`);
+  assert(menus[0]["@id"] === `${canonical}#menu`, `${htmlPath} Menu ID is incorrect`);
+  assert(
+    menuSections.length === expectedMenuSections.length,
+    `${htmlPath} MenuSection count is incorrect`,
+  );
+
+  const actualSections = menuSections.map((section) => ({
+    name: section.name,
+    items: (section.hasMenuItem ?? []).map((item) => item.name),
+  }));
+
+  assert(
+    JSON.stringify(actualSections) === JSON.stringify(expectedMenuSections),
+    `${htmlPath} Menu schema does not match menuSections content`,
+  );
+  assert(
+    menuItems.length === expectedMenuSections.flatMap((section) => section.items).length,
+    `${htmlPath} MenuItem count is incorrect`,
+  );
+}
+
+function assertEventSchema(document, htmlPath, renderPath, canonical, restaurantId) {
+  const events = collectTypedNodes(document, "Event");
+
+  if (renderPath !== "/events/") {
+    assert(events.length === 0, `${htmlPath} contains unsupported Event schema`);
+    return;
+  }
+
+  const expectedEvents = supportedEvents.filter((event) => {
+    const activeUntil = event.endDate ?? event.startDate;
+    return event.verified && new Date(activeUntil).getTime() > verificationTime;
+  });
+
+  assert(events.length === expectedEvents.length, `${htmlPath} Event count is incorrect`);
+
+  for (const event of events) {
+    const idPrefix = `${canonical}#event-`;
+    const eventId = event["@id"]?.startsWith(idPrefix)
+      ? event["@id"].slice(idPrefix.length)
+      : undefined;
+    const expected = expectedEvents.find((candidate) => candidate.id === eventId);
+
+    assert(expected, `${htmlPath} contains unsupported Event ${event["@id"] ?? "without an ID"}`);
+    assert(event.name === expected.name, `${htmlPath} Event name is unsupported`);
+    assert(event.startDate === expected.startDate, `${htmlPath} Event startDate is unsupported`);
+    assert(event.endDate === expected.endDate, `${htmlPath} Event endDate is unsupported`);
+    assert(event.description === expected.description, `${htmlPath} Event description is unsupported`);
+    assert(event.url === expected.url, `${htmlPath} Event URL is unsupported`);
+    assert(event.location?.["@id"] === restaurantId, `${htmlPath} Event location is unsupported`);
+
+    const activeUntil = event.endDate ?? event.startDate;
+    assert(
+      Number.isFinite(new Date(activeUntil).getTime()) &&
+        new Date(activeUntil).getTime() > verificationTime,
+      `${htmlPath} contains an expired or invalid Event`,
+    );
+  }
+}
+
+function assertNoReviewSchema(document, htmlPath) {
+  assert(
+    collectTypedNodes(document, "Review").length === 0,
+    `${htmlPath} contains Review schema`,
+  );
+  assert(
+    collectTypedNodes(document, "AggregateRating").length === 0,
+    `${htmlPath} contains AggregateRating schema`,
+  );
+
+  const serialized = JSON.stringify(document);
+
+  assert(!serialized.includes('"aggregateRating"'), `${htmlPath} contains aggregateRating`);
   assert(!serialized.includes('"review"'), `${htmlPath} contains review schema`);
+}
+
+function collectTypedNodes(value, type) {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectTypedNodes(item, type));
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const nodeTypes = Array.isArray(value["@type"])
+    ? value["@type"]
+    : [value["@type"]];
+  const matches = nodeTypes.includes(type) ? [value] : [];
+
+  return [
+    ...matches,
+    ...Object.values(value).flatMap((item) => collectTypedNodes(item, type)),
+  ];
+}
+
+async function assertCrawlFiles(siteHome) {
+  const sitemap = await readOutput("sitemap.xml");
+  const robots = await readOutput("robots.txt");
+  const sitemapLocations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(
+    (match) => match[1],
+  );
+  const expectedLocations = canonicalEntries.map(([, routePath]) =>
+    `${siteHome}${routePath === "/" ? "" : routePath.slice(1)}`,
+  );
+
+  assertSafeOutput(sitemap, "sitemap.xml");
+  assertSafeOutput(robots, "robots.txt");
+  assert(sitemap.includes('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'), "sitemap.xml has an invalid root");
+  assert(!/<(?:priority|changefreq)>/u.test(sitemap), "sitemap.xml contains priority or changefreq");
+  assert(
+    JSON.stringify([...sitemapLocations].sort()) ===
+      JSON.stringify([...expectedLocations].sort()),
+    "sitemap.xml membership does not exactly match canonical routes",
+  );
+
+  for (const [aliasPath] of aliasEntries) {
+    const aliasUrl = `${siteHome}${aliasPath.slice(1)}`;
+    assert(!sitemapLocations.includes(aliasUrl), `sitemap.xml contains alias ${aliasUrl}`);
+  }
+
+  const expectedAllowPath = new URL(siteHome).pathname;
+  const sitemapDirective = extractSingle(
+    robots,
+    /^Sitemap:\s*(\S+)$/gmu,
+    "robots.txt Sitemap directive",
+  );
+  const allowDirective = extractSingle(
+    robots,
+    /^Allow:\s*(\S+)$/gmu,
+    "robots.txt Allow directive",
+  );
+
+  assert(sitemapDirective === `${siteHome}sitemap.xml`, "robots.txt Sitemap URL is incorrect");
+  assert(allowDirective === expectedAllowPath, "robots.txt Allow path is incorrect");
+}
+
+function assertSafeOutput(value, label) {
+  assert(
+    !/https?:\/\/(?:[^/\s"']+\.)?owner\.com(?:[/\s"']|$)/iu.test(value),
+    `${label} contains an Owner.com URL`,
+  );
+  assert(
+    !/https?:\/\/[^\s"'<]*toasttab\.com\b/iu.test(value) &&
+      !/__[^\s]*TOAST[^\s]*__/u.test(value),
+    `${label} contains a placeholder Toast URL`,
+  );
 }
 
 async function assertFallback(expectedBasePath, expectedCanonical) {

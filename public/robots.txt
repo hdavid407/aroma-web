@@ -1,4 +1,4 @@
 User-agent: *
-Allow: /
+Allow: /aroma-web/
 
 Sitemap: https://hdavid407.github.io/aroma-web/sitemap.xml
