@@ -267,9 +267,13 @@ function assertEventSchema(document, html, htmlPath, renderPath, canonical, rest
     return;
   }
 
-  const visibleEvents = [...html.matchAll(
-    /<article\b[^>]*data-event-id="([^"]+)"[^>]*data-event-start="([^"]+)"[^>]*data-event-end="([^"]+)"[^>]*>/gu,
-  )].map((match) => ({ id: match[1], startDate: match[2], endDate: match[3] }));
+  const visibleEvents = [...html.matchAll(/<article\b([^>]*)>/gu)]
+    .map((match) => ({
+      id: readAttribute(match[1], "data-event-id"),
+      startDate: readAttribute(match[1], "data-event-start"),
+      endDate: readAttribute(match[1], "data-event-end"),
+    }))
+    .filter((event) => event.id && event.startDate);
 
   assert(events.length === visibleEvents.length, `${htmlPath} Event schema does not match visible events`);
 
