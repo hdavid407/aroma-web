@@ -1,11 +1,115 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  businessProfile,
+  type EventRecord,
+  type GalleryItem,
+  type HoursEntry,
+  type PageAction,
+  type RouteDefinition,
+  resolveRoute,
+} from "./siteContent";
 
-const RESERVE_URL = "https://calendar.app.google/cpmqknZ47F98bgRA8";
 const assetUrl = (filename: string) =>
   `${import.meta.env.BASE_URL}assets/${filename}`;
 
+const routeHref = (path: string) => {
+  const basePath = import.meta.env.BASE_URL;
+  const trimmedPath = path.startsWith("/") ? path.slice(1) : path;
+
+  return `${basePath}${trimmedPath}`;
+};
+
+const homeAnchors = {
+  brunch: `${routeHref("/menu/")}#brunch-menu`,
+  afterDark: routeHref("/events/"),
+};
+
+const EXPERIENCE_CARDS = [
+  {
+    id: "food",
+    title: "Food",
+    copy: "Bold flavors, rooted in culture.",
+    image: "food-01.jpg",
+    alt: "A spread of flavorful dishes and wings",
+    href: routeHref("/menu/"),
+    analytics: "menu-experience-food",
+  },
+  {
+    id: "cocktails",
+    title: "Cocktails",
+    copy: "Crafted with intention.",
+    image: "drinks-01.jpg",
+    alt: "A chili-rimmed cocktail with lime",
+    href: routeHref("/menu/"),
+    analytics: "menu-experience-cocktails",
+  },
+  {
+    id: "brunch",
+    title: "Brunch",
+    copy: "Weekends done right.",
+    image: "brunch-01.jpg",
+    alt: "French toast topped with strawberries and blueberries",
+    href: `${routeHref("/menu/")}#brunch-menu`,
+    analytics: "menu-experience-brunch",
+  },
+  {
+    id: "after-dark",
+    title: "After dark",
+    copy: "Music. Drinks. Vibes.",
+    image: "lounge-01.jpg",
+    alt: "Guests enjoying cocktails in the lounge",
+    href: routeHref("/events/"),
+    analytics: "menu-experience-events",
+  },
+];
+
+const GLITTER_SPARKS = Array.from({ length: 10 }, (_, index) => index + 1);
+
 type ArrowProps = {
   className?: string;
+};
+
+type AppProps = {
+  routePath: string;
+};
+
+type HeaderProps = {
+  isHome: boolean;
+};
+
+type RouteActionProps = {
+  action: PageAction;
+  variant?: "primary" | "outline" | "text";
+};
+
+type PageHeroProps = {
+  route: RouteDefinition;
+};
+
+type PageActionsProps = {
+  route: RouteDefinition;
+};
+
+type CopySectionProps = {
+  title: string;
+  body: string[];
+  id?: string;
+};
+
+type MenuRouteProps = {
+  route: RouteDefinition;
+};
+
+type EventListProps = {
+  events: EventRecord[];
+};
+
+type HoursListProps = {
+  entries: HoursEntry[];
+};
+
+type GalleryGridProps = {
+  items: GalleryItem[];
 };
 
 function Arrow({ className = "" }: ArrowProps) {
@@ -44,7 +148,7 @@ function TikTokIcon() {
   );
 }
 
-function Header() {
+function Header({ isHome }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -53,10 +157,11 @@ function Header() {
   }, [menuOpen]);
 
   const closeMenu = () => setMenuOpen(false);
+  const brandHref = isHome ? "#top" : routeHref("/");
 
   return (
     <header className="site-header">
-      <a className="brand" href="#top" aria-label="Aroma Gastrobar home">
+      <a className="brand" href={brandHref} aria-label="Aroma Gastrobar home">
         <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
       </a>
 
@@ -72,23 +177,28 @@ function Header() {
       </button>
 
       <nav className={menuOpen ? "nav is-open" : "nav"} aria-label="Main navigation">
-        <a href="#experiences" onClick={closeMenu}>
+        <a href={routeHref("/menu/")} data-analytics="menu-nav" onClick={closeMenu}>
           Menu
         </a>
-        <a href="#brunch" onClick={closeMenu}>
+        <a href={homeAnchors.brunch} data-analytics="menu-brunch-nav" onClick={closeMenu}>
           Brunch
         </a>
-        <a href="#after-dark" onClick={closeMenu}>
+        <a
+          href={homeAnchors.afterDark}
+          data-analytics="menu-after-dark-nav"
+          onClick={closeMenu}
+        >
           After dark
         </a>
-        <a href="#visit" onClick={closeMenu}>
+        <a href={routeHref("/contact/")} onClick={closeMenu}>
           Contact
         </a>
         <a
           className="nav-reserve"
-          href={RESERVE_URL}
+          href={businessProfile.reservationUrl}
           target="_blank"
           rel="noreferrer"
+          data-analytics="reserve-nav"
           onClick={closeMenu}
         >
           Reserve
@@ -97,41 +207,6 @@ function Header() {
     </header>
   );
 }
-
-const experiences = [
-  {
-    id: "food",
-    title: "Food",
-    copy: "Bold flavors, rooted in culture.",
-    image: assetUrl("food-01.jpg"),
-    alt: "A spread of flavorful dishes and wings",
-    href: "https://www.aromagastrobar.com/dinner",
-  },
-  {
-    id: "cocktails",
-    title: "Cocktails",
-    copy: "Crafted with intention.",
-    image: assetUrl("drinks-01.jpg"),
-    alt: "A chili-rimmed cocktail with lime",
-    href: "https://www.aromagastrobar.com/drinks",
-  },
-  {
-    id: "brunch",
-    title: "Brunch",
-    copy: "Weekends done right.",
-    image: assetUrl("brunch-01.jpg"),
-    alt: "French toast topped with strawberries and blueberries",
-    href: "#visit",
-  },
-  {
-    id: "after-dark",
-    title: "After dark",
-    copy: "Music. Drinks. Vibes.",
-    image: assetUrl("lounge-01.jpg"),
-    alt: "Guests enjoying cocktails in the lounge",
-    href: "#reserve",
-  },
-];
 
 function Experiences() {
   return (
@@ -144,20 +219,21 @@ function Experiences() {
         </h2>
         <p>
           From chef-driven Dominican fusion to cocktails, weekend brunch and late
-          nights—Aroma moves with the moment.
+          nights, Aroma moves with the moment.
         </p>
       </div>
 
       <div className="experience-rail">
-        {experiences.map((item, index) => (
+        {EXPERIENCE_CARDS.map((item, index) => (
           <a
             className={`experience experience-${index + 1}`}
             id={item.id}
             href={item.href}
             key={item.title}
+            data-analytics={item.analytics}
           >
             <div className="experience-image">
-              <img src={item.image} alt={item.alt} />
+              <img src={assetUrl(item.image)} alt={item.alt} />
             </div>
             <div className="experience-copy">
               <div>
@@ -193,17 +269,19 @@ function Reservation() {
         <div className="reservation-actions">
           <a
             className="button button-primary"
-            href={RESERVE_URL}
+            href={businessProfile.reservationUrl}
             target="_blank"
             rel="noreferrer"
+            data-analytics="reserve-primary"
           >
             Reserve your table
           </a>
           <a
             className="text-link"
-            href="https://maps.google.com/?q=1700+N+Semoran+Blvd+Suite+118+Orlando+FL+32807"
+            href={businessProfile.directionsUrl}
             target="_blank"
             rel="noreferrer"
+            data-analytics="directions-primary"
           >
             Get directions
           </a>
@@ -222,9 +300,9 @@ function Footer() {
           <div>
             <span className="detail-label">Located at</span>
             <address>
-              1700 N Semoran Blvd, Suite 118
+              {businessProfile.addressLines[0]}
               <br />
-              Orlando, FL 32807
+              {businessProfile.addressLines[1]}
             </address>
           </div>
         </div>
@@ -238,26 +316,16 @@ function Footer() {
       </div>
 
       <div className="footer-bottom">
-        <a className="footer-brand" href="#top" aria-label="Back to top">
+        <a className="footer-brand" href={routeHref("/")} aria-label="Back to top">
           <img src={assetUrl("aroma-logo.png")} alt="Aroma Gastrobar" />
         </a>
         <div className="social-links">
-          <a
-            href="https://instagram.com/aroma_orlando"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <InstagramIcon />
-            Instagram
-          </a>
-          <a
-            href="https://tiktok.com/aroma_orlando"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <TikTokIcon />
-            TikTok
-          </a>
+          {businessProfile.socialLinks.map((socialLink) => (
+            <a href={socialLink.href} target="_blank" rel="noreferrer" key={socialLink.id}>
+              {socialLink.id === "instagram" ? <InstagramIcon /> : <TikTokIcon />}
+              {socialLink.label}
+            </a>
+          ))}
         </div>
       </div>
       <div className="copyright">
@@ -268,14 +336,301 @@ function Footer() {
   );
 }
 
-export default function App() {
+function RouteAction({ action, variant = "primary" }: RouteActionProps) {
+  const className =
+    variant === "text"
+      ? "text-link"
+      : variant === "outline"
+        ? "button button-outline"
+        : "button button-primary";
+
+  return (
+    <a
+      className={className}
+      href={action.href.startsWith("/") ? routeHref(action.href) : action.href}
+      target={action.external ? "_blank" : undefined}
+      rel={action.external ? "noreferrer" : undefined}
+      data-analytics={action.analytics}
+    >
+      {action.label}
+    </a>
+  );
+}
+
+function PageHero({ route }: PageHeroProps) {
+  return (
+    <section className="page-hero" id="top">
+      <Header isHome={false} />
+      <div
+        className="page-hero-image"
+        style={{ backgroundImage: `url("${assetUrl(route.meta.heroImage)}")` }}
+        aria-hidden="true"
+      />
+      <div className="page-hero-shade" aria-hidden="true" />
+      <div className="page-hero-content section-pad">
+        <span className="page-eyebrow">{route.meta.eyebrow}</span>
+        <h1>{route.meta.heading}</h1>
+        <p>{route.meta.intro}</p>
+      </div>
+    </section>
+  );
+}
+
+function PageActions({ route }: PageActionsProps) {
+  const { primaryAction, secondaryAction, tertiaryAction } = route.content;
+
+  if (!primaryAction && !secondaryAction && !tertiaryAction) {
+    return null;
+  }
+
+  return (
+    <div className="route-actions">
+      {primaryAction ? <RouteAction action={primaryAction} /> : null}
+      {secondaryAction ? <RouteAction action={secondaryAction} variant="outline" /> : null}
+      {tertiaryAction ? <RouteAction action={tertiaryAction} variant="text" /> : null}
+    </div>
+  );
+}
+
+function CopySection({ title, body, id }: CopySectionProps) {
+  return (
+    <section className="route-card" id={id}>
+      <h2>{title}</h2>
+      {body.map((paragraph) => (
+        <p key={paragraph}>{paragraph}</p>
+      ))}
+    </section>
+  );
+}
+
+function OrderingPlaceholder({ note }: { note: string }) {
+  return (
+    <section className="route-card route-placeholder">
+      <div>
+        <span className="page-eyebrow">Ordering</span>
+        <h2>Online ordering is a future connection point.</h2>
+        <p>{note}</p>
+      </div>
+      <button
+        className="button button-outline"
+        type="button"
+        disabled
+        data-analytics="ordering-future"
+      >
+        Online ordering coming soon
+      </button>
+    </section>
+  );
+}
+
+function ReviewsPlaceholder({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <section className="route-card route-placeholder">
+      <div>
+        <span className="page-eyebrow">Future boundary</span>
+        <h2>{title}</h2>
+        <p>{body}</p>
+      </div>
+    </section>
+  );
+}
+
+function MenuRoute({ route }: MenuRouteProps) {
+  return (
+    <>
+      {route.content.menuSections?.map((section) => (
+        <section className="route-card" id={section.id} key={section.id}>
+          <div className="route-card-header">
+            <span className="page-eyebrow">{section.title}</span>
+            <h2>{section.summary}</h2>
+          </div>
+          <div className="menu-grid">
+            {section.items.map((item) => (
+              <article className="menu-item" key={item.name}>
+                <div className="menu-item-header">
+                  <h3>{item.name}</h3>
+                  {item.price ? <span>{item.price}</span> : null}
+                </div>
+                <p>{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+      {route.content.sections?.map((section) => (
+        <CopySection body={section.body} id="brunch-menu" key={section.title} title={section.title} />
+      ))}
+      {route.content.orderingNote ? <OrderingPlaceholder note={route.content.orderingNote} /> : null}
+    </>
+  );
+}
+
+function filterUpcomingEvents(events: EventRecord[]) {
+  const now = new Date();
+
+  return events.filter((event) => event.verified && new Date(event.startIso).getTime() >= now.getTime());
+}
+
+function EventList({ events }: EventListProps) {
+  const upcomingEvents = useMemo(() => filterUpcomingEvents(events), [events]);
+
+  return (
+    <section className="route-card">
+      <div className="route-card-header">
+        <span className="page-eyebrow">Upcoming</span>
+        <h2>Current hand-maintained event listings</h2>
+      </div>
+      {upcomingEvents.length === 0 ? (
+        <p>No currently scheduled events are published right now. Check back soon or call the team for updates.</p>
+      ) : (
+        <div className="event-list">
+          {upcomingEvents.map((event) => (
+            <article className="event-card" key={event.id}>
+              <span className="event-date">{event.displayDate}</span>
+              <h3>{event.title}</h3>
+              <p className="event-time">{event.timeLabel}</p>
+              <p>{event.summary}</p>
+              {event.recurringNote ? <p className="event-note">{event.recurringNote}</p> : null}
+              {event.href ? (
+                <a className="text-link" href={event.href} target="_blank" rel="noreferrer">
+                  View event details
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function FaqGrid({ items }: { items: RouteDefinition["content"]["faqs"] }) {
+  if (!items?.length) {
+    return null;
+  }
+
+  return (
+    <section className="route-card">
+      <div className="route-card-header">
+        <span className="page-eyebrow">FAQ</span>
+        <h2>Helpful planning details</h2>
+      </div>
+      <div className="faq-grid">
+        {items.map((item) => (
+          <article className="faq-item" key={item.question}>
+            <h3>{item.question}</h3>
+            <p>{item.answer}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function HoursList({ entries }: HoursListProps) {
+  return (
+    <div className="hours-list">
+      {entries.map((entry) => (
+        <div className="hours-row" key={entry.days}>
+          <span>{entry.days}</span>
+          <span>{entry.hours}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ContactDetails({ route }: { route: RouteDefinition }) {
+  return (
+    <section className="route-card route-card-split">
+      <div>
+        <span className="page-eyebrow">Visit Aroma</span>
+        <h2>{businessProfile.fullAddress}</h2>
+        <p>
+          <a href={businessProfile.phoneHref}>{businessProfile.phoneDisplay}</a>
+          <br />
+          <a href={businessProfile.emailHref}>{businessProfile.email}</a>
+        </p>
+        {route.content.hoursNote ? <p className="event-note">{route.content.hoursNote}</p> : null}
+      </div>
+      <div>
+        <span className="page-eyebrow">Current posted hours</span>
+        <HoursList entries={businessProfile.hours} />
+      </div>
+    </section>
+  );
+}
+
+function GalleryGrid({ items }: GalleryGridProps) {
+  return (
+    <section className="route-card">
+      <div className="gallery-grid">
+        {items.map((item) => (
+          <figure className="gallery-item" key={item.image}>
+            <img src={assetUrl(item.image)} alt={item.alt} />
+            <figcaption>{item.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GenericRoutePage({ route }: { route: RouteDefinition }) {
+  return (
+    <main className="route-page">
+      <PageHero route={route} />
+      <section className="route-content section-pad">
+        <div className="route-intro">
+          <span className="page-eyebrow">{route.meta.eyebrow}</span>
+          <p>{route.content.lead ?? route.meta.description}</p>
+          <PageActions route={route} />
+        </div>
+
+        {route.id === "menu" ? <MenuRoute route={route} /> : null}
+        {route.id === "events" && route.content.sections
+          ? route.content.sections.map((section) => (
+              <CopySection body={section.body} key={section.title} title={section.title} />
+            ))
+          : null}
+        {route.id === "events" && route.content.events ? <EventList events={route.content.events} /> : null}
+        {route.id === "contact" ? <ContactDetails route={route} /> : null}
+        {route.id === "gallery" && route.content.gallery ? <GalleryGrid items={route.content.gallery} /> : null}
+        {route.id !== "menu" && route.id !== "events" && route.id !== "contact" && route.id !== "gallery"
+          ? route.content.sections?.map((section) => (
+              <CopySection body={section.body} key={section.title} title={section.title} />
+            ))
+          : null}
+        {route.id === "catering" ? <FaqGrid items={route.content.faqs} /> : null}
+        {route.id === "story" && route.content.reviewPlaceholder ? (
+          <ReviewsPlaceholder
+            body={route.content.reviewPlaceholder.body}
+            title={route.content.reviewPlaceholder.title}
+          />
+        ) : null}
+      </section>
+      <Reservation />
+      <Footer />
+    </main>
+  );
+}
+
+function HomePage() {
   const heroRef = useRef<HTMLElement>(null);
   const [heroVisible, setHeroVisible] = useState(true);
 
   useEffect(() => {
     const hero = heroRef.current;
 
-    if (!hero || !("IntersectionObserver" in window)) return;
+    if (!hero || !("IntersectionObserver" in window)) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => setHeroVisible(entry.isIntersecting),
@@ -293,7 +648,7 @@ export default function App() {
         className={heroVisible ? "hero is-visible" : "hero"}
         id="top"
       >
-        <Header />
+        <Header isHome />
         <div
           className="hero-image"
           style={{
@@ -303,16 +658,9 @@ export default function App() {
         />
         <div className="hero-shade" aria-hidden="true" />
         <div className="hero-glitter" aria-hidden="true">
-          <span className="glitter-spark glitter-spark-1" />
-          <span className="glitter-spark glitter-spark-2" />
-          <span className="glitter-spark glitter-spark-3" />
-          <span className="glitter-spark glitter-spark-4" />
-          <span className="glitter-spark glitter-spark-5" />
-          <span className="glitter-spark glitter-spark-6" />
-          <span className="glitter-spark glitter-spark-7" />
-          <span className="glitter-spark glitter-spark-8" />
-          <span className="glitter-spark glitter-spark-9" />
-          <span className="glitter-spark glitter-spark-10" />
+          {GLITTER_SPARKS.map((spark) => (
+            <span className={`glitter-spark glitter-spark-${spark}`} key={spark} />
+          ))}
         </div>
         <div className="hero-content">
           <h1>
@@ -327,13 +675,14 @@ export default function App() {
           <div className="hero-actions">
             <a
               className="button button-primary"
-              href={RESERVE_URL}
+              href={businessProfile.reservationUrl}
               target="_blank"
               rel="noreferrer"
+              data-analytics="reserve-hero"
             >
               Reserve a table
             </a>
-            <a className="button button-outline" href="#experiences">
+            <a className="button button-outline" href={routeHref("/menu/")} data-analytics="menu-hero">
               Explore the menu
             </a>
           </div>
@@ -351,4 +700,28 @@ export default function App() {
       <Footer />
     </main>
   );
+}
+
+export default function App({ routePath }: AppProps) {
+  const route = useMemo(
+    () => resolveRoute(routePath, import.meta.env.BASE_URL),
+    [routePath],
+  );
+
+  useEffect(() => {
+    document.title = route.meta.title;
+  }, [route]);
+
+  useEffect(() => {
+    document.body.dataset.routeId = route.id;
+    return () => {
+      delete document.body.dataset.routeId;
+    };
+  }, [route.id]);
+
+  if (route.id === "home") {
+    return <HomePage />;
+  }
+
+  return <GenericRoutePage route={route} />;
 }
