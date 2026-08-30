@@ -310,7 +310,7 @@ function Footer() {
           <span className="detail-index">02</span>
           <div>
             <span className="detail-label">After dark</span>
-            <p>Fri &amp; Sat — Lounge after 10PM</p>
+            <p>{businessProfile.afterDarkNote}</p>
           </div>
         </div>
       </div>
@@ -457,7 +457,7 @@ function MenuRoute({ route }: MenuRouteProps) {
                   <h3>{item.name}</h3>
                   {item.price ? <span>{item.price}</span> : null}
                 </div>
-                <p>{item.description}</p>
+                {item.description ? <p>{item.description}</p> : null}
               </article>
             ))}
           </div>
@@ -474,7 +474,14 @@ function MenuRoute({ route }: MenuRouteProps) {
 function filterUpcomingEvents(events: EventRecord[]) {
   const now = new Date();
 
-  return events.filter((event) => event.verified && new Date(event.startIso).getTime() >= now.getTime());
+  return events.filter((event) => {
+    if (!event.verified) {
+      return false;
+    }
+
+    const activeUntil = event.endIso ?? event.startIso;
+    return new Date(activeUntil).getTime() >= now.getTime();
+  });
 }
 
 function EventList({ events }: EventListProps) {

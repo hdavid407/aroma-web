@@ -75,3 +75,18 @@ Executed:
 - Hours are intentionally stored as provisional posted facts and should be confirmed before production cutover.
 - The menu content is intentionally typed so Task 2 can reuse it for static HTML metadata/schema generation.
 - The events list includes a past public event record to exercise the “expired records do not render” rule.
+
+## Fix Round 1 - 2026-08-30
+
+Applied the requested review fixes before proceeding:
+
+- Removed unsupported implication-heavy copy from the Gift Card Information and Careers routes so they now stay at neutral contact/information language.
+- Removed invented sushi item descriptions for `La Toxica Roll`, `El Diablo Roll`, and `La Chapi Roll`; the route now keeps only the verified item names when no public description is available.
+- Updated `filterUpcomingEvents` in `src/App.tsx` so an event remains rendered through its `endIso` when present and only falls off after the event has ended.
+- Moved the footer's after-dark note into the shared `businessProfile` contract as `afterDarkNote` instead of keeping it hardcoded in the footer component.
+
+Validation rerun:
+
+- `npm run build`
+- `npm run build:pages`
+- targeted `rg` checks confirming the removed unsupported phrases and invented sushi descriptions are no longer present in `src/`

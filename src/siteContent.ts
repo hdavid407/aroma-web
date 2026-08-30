@@ -38,6 +38,7 @@ export type BusinessProfile = {
   directionsUrl: string;
   socialLinks: SocialLink[];
   hours: HoursEntry[];
+  afterDarkNote: string;
 };
 
 export type RouteMeta = {
@@ -64,7 +65,7 @@ export type ContentSection = {
 
 export type MenuItem = {
   name: string;
-  description: string;
+  description?: string;
   price?: string;
 };
 
@@ -155,6 +156,7 @@ export const businessProfile: BusinessProfile = {
     { days: "Saturday", hours: "12 PM to 2 AM", status: "provisional" },
     { days: "Sunday", hours: "12 PM to 2 AM", status: "provisional" },
   ],
+  afterDarkNote: "Fri & Sat — Lounge after 10PM",
 };
 
 export const canonicalRoutes: RouteDefinition[] = [
@@ -256,18 +258,12 @@ export const canonicalRoutes: RouteDefinition[] = [
           items: [
             {
               name: "La Toxica Roll",
-              description:
-                "A signature house roll from the public menu lineup.",
             },
             {
               name: "El Diablo Roll",
-              description:
-                "A spice-forward roll featured on Aroma's current sushi section.",
             },
             {
               name: "La Chapi Roll",
-              description:
-                "A signature roll that rounds out the restaurant's late-night sushi offering.",
             },
           ],
         },
@@ -592,25 +588,25 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "gift-cards",
     path: "/gift-cards/",
     meta: {
-      title: "Gift Cards | Aroma Gastrobar Orlando",
+      title: "Gift Card Information | Aroma Gastrobar Orlando",
       description:
-        "Ask Aroma Gastrobar directly about current gift card availability for dinners, celebrations, and brunch plans.",
+        "Contact Aroma Gastrobar directly for gift card information and in-house guidance.",
       eyebrow: "Gift Cards",
       heading: "Handle gift card questions with the restaurant directly.",
       intro:
-        "This route gives guests a simple place to ask about current gift card availability without inventing a checkout flow that is not connected yet.",
+        "This route gives guests a simple place to ask about gift card information without inventing a checkout flow that is not connected yet.",
       heroImage: "drinks-01.jpg",
       heroAlt: "A cocktail at Aroma Gastrobar",
     },
     content: {
       lead:
-        "For now, gift card availability is best confirmed directly with the team so details stay accurate.",
+        "Use this page to contact Aroma directly about gift card information.",
       sections: [
         {
-          title: "How to ask",
+          title: "Direct information",
           body: [
-            "Call if you want the quickest answer on current gift card options, pickup timing, or a same-day plan.",
-            "Email works well when you want to leave your request with the restaurant and hear back with the next step.",
+            "Call if you want the fastest answer about gift card information.",
+            "Email works well when you want to leave a written request and hear back directly from the restaurant.",
           ],
         },
       ],
@@ -638,23 +634,23 @@ export const canonicalRoutes: RouteDefinition[] = [
     meta: {
       title: "Careers | Aroma Gastrobar Orlando",
       description:
-        "Reach Aroma Gastrobar directly about current restaurant and hospitality opportunities in Orlando.",
+        "Contact Aroma Gastrobar directly for employment information and hiring-related questions in Orlando.",
       eyebrow: "Careers",
       heading: "Reach out if you'd like to work with the team.",
       intro:
-        "This route gives applicants a direct line for current hospitality opportunities without pretending there is a staffed applicant portal behind the page.",
+        "This route gives applicants a direct line for employment information without pretending there is a staffed applicant portal behind the page.",
       heroImage: "food-03.jpg",
       heroAlt: "Plated dinner service at Aroma Gastrobar",
     },
     content: {
       lead:
-        "If you're interested in front-of-house, bar, kitchen, or event-support work, direct outreach is the clearest way to start.",
+        "Use this page to contact Aroma directly about employment information or to ask where to send experience details.",
       sections: [
         {
-          title: "Best next step",
+          title: "Direct contact",
           body: [
-            "Share your experience, role interest, and availability by email so the team has enough context to reply.",
-            "If you prefer a faster check-in, call the restaurant and ask about current openings before sending details.",
+            "Email is the clearest way to ask where experience details should be sent and what information is most helpful.",
+            "Call if you want to confirm the best contact path before sending anything over.",
           ],
         },
       ],
