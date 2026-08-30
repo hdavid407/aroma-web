@@ -5,7 +5,11 @@ import {
   routeDefinitionForEntry,
   routeHtmlInputs,
 } from "./src/routeManifest";
-import { buildRouteHeadHtml, DEFAULT_SITE_ORIGIN } from "./src/seo";
+import {
+  buildRouteHeadHtml,
+  buildSiteUrl,
+  DEFAULT_SITE_ORIGIN,
+} from "./src/seo";
 
 const ROUTE_HEAD_MARKER = '<meta name="route-head" content="pending" />';
 const FALLBACK_SCRIPT_MARKER = "__AROMA_FALLBACK_SCRIPT__";
@@ -61,10 +65,21 @@ const routeHeadPlugin = (siteOrigin: string): Plugin => {
 
         if (htmlPath === "404.html") {
           const fallbackHome = baseRouteUrl(resolvedConfig.base, "/");
+          const fallbackMenu = baseRouteUrl(resolvedConfig.base, "/menu/");
+          const fallbackMenuCanonical = buildSiteUrl(
+            siteOrigin,
+            resolvedConfig.base,
+            "/menu/",
+          );
 
           return html
             .replace(FALLBACK_SCRIPT_MARKER, buildFallbackScript(resolvedConfig.base))
-            .replaceAll("__AROMA_FALLBACK_HOME__", fallbackHome);
+            .replaceAll("__AROMA_FALLBACK_HOME__", fallbackHome)
+            .replaceAll("__AROMA_FALLBACK_MENU__", fallbackMenu)
+            .replaceAll(
+              "__AROMA_FALLBACK_MENU_CANONICAL__",
+              fallbackMenuCanonical,
+            );
         }
 
         const entry = findRouteEntryByHtmlPath(htmlPath);

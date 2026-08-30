@@ -26,8 +26,17 @@ export type HoursEntry = {
   status: "provisional";
 };
 
+export type BusinessAddress = {
+  streetAddress: string;
+  addressLocality: string;
+  addressRegion: string;
+  postalCode: string;
+  addressCountry: string;
+};
+
 export type BusinessProfile = {
   name: string;
+  address: BusinessAddress;
   addressLines: [string, string];
   fullAddress: string;
   phoneDisplay: string;
@@ -38,6 +47,7 @@ export type BusinessProfile = {
   directionsUrl: string;
   socialLinks: SocialLink[];
   hours: HoursEntry[];
+  cuisines: string[];
   afterDarkNote: string;
 };
 
@@ -125,10 +135,21 @@ export type RouteDefinition = {
   content: RouteContent;
 };
 
+const BUSINESS_ADDRESS: BusinessAddress = {
+  streetAddress: "1700 N Semoran Blvd, Suite 118",
+  addressLocality: "Orlando",
+  addressRegion: "FL",
+  postalCode: "32807",
+  addressCountry: "US",
+};
+
+const BUSINESS_ADDRESS_CITY_LINE = `${BUSINESS_ADDRESS.addressLocality}, ${BUSINESS_ADDRESS.addressRegion} ${BUSINESS_ADDRESS.postalCode}`;
+
 export const businessProfile: BusinessProfile = {
   name: "Aroma Gastrobar",
-  addressLines: ["1700 N Semoran Blvd, Suite 118", "Orlando, FL 32807"],
-  fullAddress: "1700 N Semoran Blvd, Suite 118, Orlando, FL 32807",
+  address: BUSINESS_ADDRESS,
+  addressLines: [BUSINESS_ADDRESS.streetAddress, BUSINESS_ADDRESS_CITY_LINE],
+  fullAddress: `${BUSINESS_ADDRESS.streetAddress}, ${BUSINESS_ADDRESS_CITY_LINE}`,
   phoneDisplay: "(407) 237-9661",
   phoneHref: "tel:+14072379661",
   email: "aromagastrobar@gmail.com",
@@ -156,6 +177,7 @@ export const businessProfile: BusinessProfile = {
     { days: "Saturday", hours: "12 PM to 2 AM", status: "provisional" },
     { days: "Sunday", hours: "12 PM to 2 AM", status: "provisional" },
   ],
+  cuisines: ["Dominican", "Latin fusion"],
   afterDarkNote: "Fri & Sat — Lounge after 10PM",
 };
 
