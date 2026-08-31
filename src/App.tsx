@@ -8,6 +8,7 @@ import {
 } from "react";
 import {
   businessProfile,
+  getRouteBreadcrumbs,
   type EventRecord,
   type GalleryItem,
   type HoursEntry,
@@ -89,6 +90,10 @@ type RouteActionProps = {
 };
 
 type PageHeroProps = {
+  route: RouteDefinition;
+};
+
+type BreadcrumbsProps = {
   route: RouteDefinition;
 };
 
@@ -382,6 +387,34 @@ function RouteAction({ action, variant = "primary" }: RouteActionProps) {
   );
 }
 
+function Breadcrumbs({ route }: BreadcrumbsProps) {
+  const basePath = useBasePath();
+  const breadcrumbs = getRouteBreadcrumbs(route);
+
+  return (
+    <nav className="breadcrumbs" aria-label="Breadcrumb">
+      <ol>
+        {breadcrumbs.map((breadcrumb, index) => {
+          const isCurrent = index === breadcrumbs.length - 1;
+
+          return (
+            <li
+              aria-current={isCurrent ? "page" : undefined}
+              key={breadcrumb.path}
+            >
+              {isCurrent ? (
+                breadcrumb.name
+              ) : (
+                <a href={routeHref(basePath, breadcrumb.path)}>{breadcrumb.name}</a>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
 function PageHero({ route }: PageHeroProps) {
   const basePath = useBasePath();
 
@@ -397,6 +430,7 @@ function PageHero({ route }: PageHeroProps) {
       />
       <div className="page-hero-shade" aria-hidden="true" />
       <div className="page-hero-content section-pad">
+        <Breadcrumbs route={route} />
         <span className="page-eyebrow">{route.meta.eyebrow}</span>
         <h1>{route.meta.heading}</h1>
         <p>{route.meta.intro}</p>

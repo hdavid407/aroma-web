@@ -81,7 +81,7 @@ for (const [entryPath, renderPath, htmlPath] of routeEntries) {
 
   assert(canonical === expectedCanonical, `${htmlPath} canonical is ${canonical}`);
   assertMetadata(html, htmlPath, title, description, canonical);
-  assertStructuredData(html, htmlPath, renderPath, canonical, homeCanonical);
+  assertStructuredData(html, htmlPath, renderPath, canonical, homeCanonical, basePath);
 
   const metadata = { title, description, canonical };
 
@@ -153,7 +153,7 @@ function assertMetadata(html, htmlPath, title, description, canonical) {
   assert(twitterImage === ogImage, `${htmlPath} social images do not match`);
 }
 
-function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
+function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome, basePath) {
   const jsonText = extractSingle(
     html,
     /<script type="application\/ld\+json">([\s\S]*?)<\/script>/gu,
@@ -165,14 +165,15 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
   assert(Array.isArray(graph), `${htmlPath} JSON-LD does not contain an @graph`);
 
   const restaurant = graph.find(
-    (node) =>
-      Array.isArray(node["@type"]) &&
-      node["@type"].includes("Restaurant") &&
-      node["@type"].includes("LocalBusiness"),
+    (node) => node["@type"] === "Restaurant",
   );
   const webPage = graph.find((node) => node["@type"] === "WebPage");
 
-  assert(restaurant, `${htmlPath} is missing the Restaurant/LocalBusiness node`);
+  assert(restaurant, `${htmlPath} is missing the Restaurant node`);
+  assert(
+    restaurant["@id"] === `${siteHome}#restaurant`,
+    `${htmlPath} Restaurant ID is not stable`,
+  );
   assert(webPage?.url === canonical, `${htmlPath} WebPage URL does not match its canonical`);
   assert(restaurant.telephone === "+14072379661", `${htmlPath} telephone is unsupported`);
   assert(
@@ -191,7 +192,7 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
     "servesCuisine",
     "hasMap",
     "sameAs",
-    "hasMenu",
+    "menu",
     "potentialAction",
   ]) {
     assert(restaurant[field], `${htmlPath} Restaurant node is missing ${field}`);
@@ -207,7 +208,8 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
     assert(restaurant.address[field], `${htmlPath} address is missing ${field}`);
   }
 
-  assert(restaurant.hasMenu === `${siteHome}menu/`, `${htmlPath} hasMenu is incorrect`);
+  assert(restaurant.menu === `${siteHome}menu/`, `${htmlPath} menu is incorrect`);
+  assert(!("hasMenu" in restaurant), `${htmlPath} uses the deprecated hasMenu property`);
   assert(
     restaurant.potentialAction["@type"] === "ReserveAction",
     `${htmlPath} is missing ReserveAction`,
@@ -217,8 +219,73 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
 
   assertNoReviewSchema(document, htmlPath);
   assertMenuSchema(document, html, htmlPath, renderPath, canonical);
+  assertBreadcrumbSchema(document, html, htmlPath, renderPath, canonical, siteHome, basePath);
   assertNoEventOrFaqSchema(document, htmlPath);
   assertSafeOutput(serialized, `${htmlPath} JSON-LD`);
+}
+
+function assertBreadcrumbSchema(document, html, htmlPath, renderPath, canonical, siteHome, basePath) {
+  const breadcrumbNodes = collectTypedNodes(document, "BreadcrumbList");
+  const breadcrumbNavs = [
+    ...html.matchAll(/<nav\b[^>]*aria-label="Breadcrumb"[^>]*>([\s\S]*?)<\/nav>/gu),
+  ];
+
+  if (renderPath === "/") {
+    assert(breadcrumbNodes.length === 0, `${htmlPath} contains home BreadcrumbList schema`);
+    assert(breadcrumbNavs.length === 0, `${htmlPath} contains home visible breadcrumbs`);
+    return;
+  }
+
+  assert(breadcrumbNodes.length === 1, `${htmlPath} must contain one BreadcrumbList`);
+  assert(breadcrumbNavs.length === 1, `${htmlPath} must contain one visible breadcrumb nav`);
+
+  const breadcrumbNode = breadcrumbNodes[0];
+  const visibleNav = breadcrumbNavs[0][1];
+  const listHtml = extractSingle(
+    visibleNav,
+    /<ol\b[^>]*>([\s\S]*?)<\/ol>/gu,
+    `${htmlPath} visible breadcrumbs`,
+  );
+  const visibleItems = [...listHtml.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gu)].map(
+    (match) => {
+      const content = match[1];
+      const link = content.match(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/u);
+
+      return {
+        href: link?.[1],
+        name: stripHtml(link?.[2] ?? content),
+      };
+    },
+  );
+  const schemaItems = breadcrumbNode.itemListElement;
+
+  assert(breadcrumbNode["@id"] === `${canonical}#breadcrumb`, `${htmlPath} BreadcrumbList ID is incorrect`);
+  assert(Array.isArray(schemaItems), `${htmlPath} BreadcrumbList has no items`);
+  assert(
+    schemaItems.length === visibleItems.length && visibleItems.length >= 2,
+    `${htmlPath} breadcrumb item count is inconsistent`,
+  );
+
+  for (const [index, visibleItem] of visibleItems.entries()) {
+    const schemaItem = schemaItems[index];
+
+    assert(schemaItem["@type"] === "ListItem", `${htmlPath} contains an invalid breadcrumb item`);
+    assert(schemaItem.position === index + 1, `${htmlPath} breadcrumb positions are inconsistent`);
+    assert(schemaItem.name === visibleItem.name, `${htmlPath} breadcrumb names are inconsistent`);
+
+    const expectedItemUrl = index === 0 ? siteHome : canonical;
+    assert(schemaItem.item === expectedItemUrl, `${htmlPath} breadcrumb URLs are inconsistent`);
+
+    const expectedVisibleHref = index === 0 ? basePath : undefined;
+    assert(visibleItem.href === expectedVisibleHref, `${htmlPath} visible breadcrumb link is inconsistent`);
+  }
+
+  assert(visibleItems[0].name === "Home", `${htmlPath} breadcrumbs must begin with Home`);
+  assert(visibleItems[0].href === basePath, `${htmlPath} Home breadcrumb URL is incorrect`);
+  assert(
+    visibleItems.at(-1)?.href === undefined && schemaItems.at(-1)?.item === canonical,
+    `${htmlPath} current breadcrumb is not canonical`,
+  );
 }
 
 function assertMenuSchema(document, html, htmlPath, renderPath, canonical) {
@@ -443,6 +510,18 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function stripHtml(value) {
+  return value
+    .replace(/<[^>]*>/gu, "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replace(/\s+/gu, " ")
+    .trim();
 }
 
 async function collectFiles(directoryPath) {

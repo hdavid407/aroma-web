@@ -135,6 +135,11 @@ export type RouteDefinition = {
   content: RouteContent;
 };
 
+export type RouteBreadcrumb = {
+  name: string;
+  path: string;
+};
+
 const BUSINESS_ADDRESS: BusinessAddress = {
   streetAddress: "1700 N Semoran Blvd, Suite 118",
   addressLocality: "Orlando",
@@ -698,6 +703,17 @@ export const canonicalRoutes: RouteDefinition[] = [
 export const routeById = Object.fromEntries(
   canonicalRoutes.map((route) => [route.id, route]),
 ) as Record<RouteId, RouteDefinition>;
+
+export function getRouteBreadcrumbs(route: RouteDefinition): RouteBreadcrumb[] {
+  if (route.id === "home") {
+    return [];
+  }
+
+  return [
+    { name: "Home", path: routeById.home.path },
+    { name: route.meta.eyebrow, path: route.path },
+  ];
+}
 
 const routeByPath = Object.fromEntries(
   canonicalRoutes.map((route) => [route.path, route]),

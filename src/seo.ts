@@ -1,5 +1,6 @@
 import {
   businessProfile,
+  getRouteBreadcrumbs,
   routeById,
   type HoursEntry,
   type RouteDefinition,
@@ -134,6 +135,25 @@ const menuGraphNodes = (route: RouteDefinition, canonicalUrl: string) => {
   ];
 };
 
+const breadcrumbGraphNode = (
+  route: RouteDefinition,
+  canonicalUrl: string,
+  siteOrigin: string,
+  basePath: string,
+) => ({
+  "@type": "BreadcrumbList",
+  "@id": `${canonicalUrl}#breadcrumb`,
+  itemListElement: getRouteBreadcrumbs(route).map((breadcrumb, index, breadcrumbs) => ({
+    "@type": "ListItem",
+    position: index + 1,
+    name: breadcrumb.name,
+    item:
+      index === breadcrumbs.length - 1
+        ? canonicalUrl
+        : buildSiteUrl(siteOrigin, basePath, breadcrumb.path),
+  })),
+});
+
 const buildJsonLdGraph = (
   route: RouteDefinition,
   canonicalUrl: string,
@@ -148,7 +168,7 @@ const buildJsonLdGraph = (
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": ["Restaurant", "LocalBusiness"],
+        "@type": "Restaurant",
         "@id": restaurantId,
         name: businessProfile.name,
         url: homeUrl,
@@ -169,7 +189,7 @@ const buildJsonLdGraph = (
         servesCuisine: businessProfile.cuisines,
         hasMap: businessProfile.directionsUrl,
         sameAs: businessProfile.socialLinks.map((link) => link.href),
-        hasMenu: buildSiteUrl(siteOrigin, basePath, routeById.menu.path),
+        menu: buildSiteUrl(siteOrigin, basePath, routeById.menu.path),
         potentialAction: {
           "@type": "ReserveAction",
           target: businessProfile.reservationUrl,
@@ -184,6 +204,9 @@ const buildJsonLdGraph = (
         primaryImageOfPage: imageUrl,
         about: { "@id": restaurantId },
       },
+      ...(route.id === "home"
+        ? []
+        : [breadcrumbGraphNode(route, canonicalUrl, siteOrigin, basePath)]),
       ...menuGraphNodes(route, canonicalUrl),
     ],
   };

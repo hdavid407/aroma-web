@@ -1141,6 +1141,44 @@ a:focus-visible {
   line-height: 1.65;
 }
 
+.breadcrumbs {
+  margin-bottom: clamp(2rem, 4vw, 3.5rem);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  color: rgba(243, 240, 232, 0.62);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumbs li + li::before {
+  margin: 0 0.75rem;
+  color: var(--lime);
+  content: "/";
+}
+
+.breadcrumbs a {
+  color: inherit;
+  transition: color 250ms ease;
+}
+
+.breadcrumbs a:hover,
+.breadcrumbs [aria-current="page"] {
+  color: var(--lime);
+}
+
 .route-page {
   background:
     radial-gradient(circle at 100% 0, rgba(199, 162, 106, 0.05), transparent 25rem),
