@@ -1,4 +1,4 @@
-import { readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -45,6 +45,7 @@ for (const htmlFile of htmlFiles) {
   renderedRoutes.push({ entryPath, renderPath, html: renderedHtml });
 }
 
+await writeEventRoutes(renderedRoutes);
 await writeCrawlFiles(renderedRoutes);
 
 await rm(ssrDirectory, { recursive: true, force: true });
@@ -93,6 +94,59 @@ async function writeCrawlFiles(routes) {
 
   await writeFile(path.join(distDirectory, "sitemap.xml"), sitemap);
   await writeFile(path.join(distDirectory, "robots.txt"), robots);
+}
+
+async function writeEventRoutes(routes) {
+  if (typeof ssrModule.getDynamicRoutePaths !== "function") {
+    throw new TypeError(`SSR entry does not export getDynamicRoutePaths(): ${ssrEntryPath}`);
+  }
+
+  const dynamicPaths = ssrModule.getDynamicRoutePaths();
+
+  if (!dynamicPaths.length) {
+    return;
+  }
+
+  const template = await readFile(path.join(projectRoot, "events/event.html"), "utf8");
+  const eventsIndex = routes.find(({ renderPath }) => renderPath === "/events/");
+  const clientScript = eventsIndex?.html.match(/<script type="module"[^>]* src="([^"]+)"/u)?.[1];
+  const siteOrigin = (
+    process.env.SITE_ORIGIN ||
+    process.env.VITE_SITE_ORIGIN ||
+    ssrModule.DEFAULT_SITE_ORIGIN
+  )?.replace(/\/+$/u, "");
+
+  if (!clientScript || !siteOrigin) {
+    throw new Error("Unable to determine the event page client script or site origin");
+  }
+
+  for (const renderPath of dynamicPaths) {
+    const eventHtmlPath = path.join(distDirectory, routeHtmlPath(renderPath));
+    const routeTemplate = template
+      .replaceAll("__AROMA_EVENT_PATH__", renderPath)
+      .replace("__AROMA_EVENT_CLIENT_SCRIPT__", clientScript)
+      .replace(
+        '<meta name="route-head" content="pending" />',
+        ssrModule.renderRouteHead(renderPath, basePath, siteOrigin),
+      );
+    const rootTag = routeTemplate.match(/<div\b(?=[^>]*\bid="root")(?<attributes>[^>]*)><\/div>/u);
+
+    if (!rootTag?.groups) {
+      throw new Error(`Event template is missing the route root: ${renderPath}`);
+    }
+
+    const markup = ssrModule.renderRoute(renderPath, basePath);
+    const renderedRoot = rootTag[0].replace("></div>", `>${markup}</div>`);
+    const renderedHtml = routeTemplate.replace(rootTag[0], renderedRoot);
+
+    await mkdir(path.dirname(eventHtmlPath), { recursive: true });
+    await writeFile(eventHtmlPath, renderedHtml);
+    routes.push({ entryPath: renderPath, renderPath, html: renderedHtml });
+  }
+}
+
+function routeHtmlPath(routePath) {
+  return `${routePath.replace(/^\//u, "")}index.html`;
 }
 
 function escapeXml(value) {

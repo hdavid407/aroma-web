@@ -9,10 +9,12 @@ import {
 import {
   businessProfile,
   getRouteBreadcrumbs,
+  isEventUpcoming,
   type EventRecord,
   type GalleryItem,
   type HoursEntry,
   type PageAction,
+  type ProofAsset,
   type RouteDefinition,
   resolveRoute,
 } from "./siteContent";
@@ -180,8 +182,8 @@ function Header({ isHome }: HeaderProps) {
 
   return (
     <header className="site-header">
-      <a className="brand" href={brandHref} aria-label="Aroma Gastrobar home">
-        <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastrobar" />
+      <a className="brand" href={brandHref} aria-label="Aroma Gastro Bar home">
+        <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastro Bar" />
       </a>
 
       <button
@@ -208,6 +210,9 @@ function Header({ isHome }: HeaderProps) {
           onClick={closeMenu}
         >
           After dark
+        </a>
+        <a href={routeHref(basePath, "/visit/")} data-analytics="visit-nav" onClick={closeMenu}>
+          Visit
         </a>
         <a href={routeHref(basePath, "/contact/")} onClick={closeMenu}>
           Contact
@@ -308,6 +313,15 @@ function Reservation() {
           >
             Get directions
           </a>
+          <a
+            className="text-link"
+            href={businessProfile.orderUrl}
+            target="_blank"
+            rel="noreferrer"
+            data-analytics="order-primary"
+          >
+            Order online
+          </a>
         </div>
       </div>
     </section>
@@ -344,10 +358,16 @@ function Footer() {
         <a
           className="footer-brand"
           href={routeHref(basePath, "/")}
-          aria-label="Back to top"
+          aria-label="Aroma Gastro Bar home"
         >
-          <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastrobar" />
+          <img src={assetUrl(basePath, "aroma-logo.png")} alt="Aroma Gastro Bar" />
         </a>
+        <nav className="footer-nav" aria-label="Footer navigation">
+          <a href={routeHref(basePath, "/visit/")}>Visit</a>
+          <a href={routeHref(basePath, "/reservations/")}>Reservations</a>
+          <a href={routeHref(basePath, "/faq/")}>FAQ</a>
+          <a href={routeHref(basePath, "/group-dining/")}>Group dining</a>
+        </nav>
         <div className="social-links">
           {businessProfile.socialLinks.map((socialLink) => (
             <a href={socialLink.href} target="_blank" rel="noreferrer" key={socialLink.id}>
@@ -358,7 +378,7 @@ function Footer() {
         </div>
       </div>
       <div className="copyright">
-        <span>© 2026 Aroma Gastrobar</span>
+        <span>© 2026 Aroma Gastro Bar</span>
         <span>Orlando, Florida</span>
       </div>
     </footer>
@@ -466,26 +486,6 @@ function CopySection({ title, body, id }: CopySectionProps) {
   );
 }
 
-function OrderingPlaceholder({ note }: { note: string }) {
-  return (
-    <section className="route-card route-placeholder">
-      <div>
-        <span className="page-eyebrow">Ordering</span>
-        <h2>Online ordering is a future connection point.</h2>
-        <p>{note}</p>
-      </div>
-      <button
-        className="button button-outline"
-        type="button"
-        disabled
-        data-analytics="ordering-future"
-      >
-        Online ordering coming soon
-      </button>
-    </section>
-  );
-}
-
 function ReviewsPlaceholder({
   title,
   body,
@@ -499,6 +499,45 @@ function ReviewsPlaceholder({
         <span className="page-eyebrow">Future boundary</span>
         <h2>{title}</h2>
         <p>{body}</p>
+      </div>
+    </section>
+  );
+}
+
+function ProofGrid({ assets }: { assets: ProofAsset[] }) {
+  const basePath = useBasePath();
+  const approvedAssets = assets.filter((asset) => asset.approved);
+
+  if (!approvedAssets.length) {
+    return null;
+  }
+
+  return (
+    <section className="route-card proof-grid" aria-label="Aroma Gastro Bar proof">
+      <div className="route-card-header">
+        <span className="page-eyebrow">Why Aroma</span>
+        <h2>Good food, good nights, and a room worth returning to.</h2>
+      </div>
+      <div className="proof-items">
+        {approvedAssets.map((asset) => (
+          <article className="proof-item" key={`${asset.kind}-${asset.title}`}>
+            {asset.image ? (
+              <img
+                className="proof-image"
+                src={assetUrl(basePath, asset.image)}
+                alt={asset.imageAlt ?? asset.title}
+              />
+            ) : null}
+            <span className="page-eyebrow">{asset.kind.replaceAll("-", " ")}</span>
+            <h3>{asset.title}</h3>
+            <p>{asset.body}</p>
+            {asset.href && asset.source ? (
+              <a className="text-link" href={asset.href} target="_blank" rel="noreferrer">
+                {asset.source}
+              </a>
+            ) : null}
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -529,26 +568,16 @@ function MenuRoute({ route }: MenuRouteProps) {
       {route.content.sections?.map((section) => (
         <CopySection body={section.body} id="brunch-menu" key={section.title} title={section.title} />
       ))}
-      {route.content.orderingNote ? <OrderingPlaceholder note={route.content.orderingNote} /> : null}
     </>
   );
 }
 
-function filterUpcomingEvents(events: EventRecord[]) {
-  const now = new Date();
-
-  return events.filter((event) => {
-    if (!event.verified) {
-      return false;
-    }
-
-    const activeUntil = event.endIso ?? event.startIso;
-    return new Date(activeUntil).getTime() > now.getTime();
-  });
-}
-
 function EventList({ events }: EventListProps) {
-  const upcomingEvents = useMemo(() => filterUpcomingEvents(events), [events]);
+  const basePath = useBasePath();
+  const upcomingEvents = useMemo(
+    () => events.filter((event) => isEventUpcoming(event)),
+    [events],
+  );
 
   return (
     <section className="route-card">
@@ -573,15 +602,39 @@ function EventList({ events }: EventListProps) {
               <p className="event-time">{event.timeLabel}</p>
               <p>{event.summary}</p>
               {event.recurringNote ? <p className="event-note">{event.recurringNote}</p> : null}
-              {event.href ? (
-                <a className="text-link" href={event.href} target="_blank" rel="noreferrer">
-                  View event details
-                </a>
-              ) : null}
+              <a
+                className="text-link"
+                href={routeHref(basePath, `/events/${event.slug}/`)}
+                data-analytics="event-detail"
+              >
+                View event details
+              </a>
             </article>
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+function EventDetails({ event }: { event: EventRecord }) {
+  return (
+    <section className="route-card event-detail-summary">
+      <div className="route-card-header">
+        <span className="page-eyebrow">Event details</span>
+        <h2>{event.title} in Orlando</h2>
+      </div>
+      <div className="event-detail-meta">
+        <time dateTime={event.startIso}>{event.displayDate}</time>
+        <span>{event.timeLabel}</span>
+      </div>
+      <p>{event.summary}</p>
+      {event.recurringNote ? <p className="event-note">{event.recurringNote}</p> : null}
+      <p>
+        <strong>{businessProfile.name}</strong>
+        <br />
+        {businessProfile.fullAddress}
+      </p>
     </section>
   );
 }
@@ -671,21 +724,28 @@ function GenericRoutePage({ route }: { route: RouteDefinition }) {
           <PageActions route={route} />
         </div>
 
-        {route.id === "menu" ? <MenuRoute route={route} /> : null}
-        {route.id === "events" && route.content.sections
+        {route.event ? <EventDetails event={route.event} /> : null}
+        {route.event && route.content.sections
           ? route.content.sections.map((section) => (
               <CopySection body={section.body} key={section.title} title={section.title} />
             ))
           : null}
-        {route.id === "events" && route.content.events ? <EventList events={route.content.events} /> : null}
-        {route.id === "contact" ? <ContactDetails route={route} /> : null}
+        {route.id === "menu" ? <MenuRoute route={route} /> : null}
+        {route.id === "events" && !route.event && route.content.sections
+          ? route.content.sections.map((section) => (
+              <CopySection body={section.body} key={section.title} title={section.title} />
+            ))
+          : null}
+        {route.id === "events" && !route.event && route.content.events ? <EventList events={route.content.events} /> : null}
+        {route.id === "contact" || route.id === "visit" ? <ContactDetails route={route} /> : null}
         {route.id === "gallery" && route.content.gallery ? <GalleryGrid items={route.content.gallery} /> : null}
-        {route.id !== "menu" && route.id !== "events" && route.id !== "contact" && route.id !== "gallery"
+        {route.id !== "menu" && route.id !== "events" && route.id !== "contact" && route.id !== "visit" && route.id !== "gallery"
           ? route.content.sections?.map((section) => (
               <CopySection body={section.body} key={section.title} title={section.title} />
             ))
           : null}
-        {route.id === "catering" ? <FaqGrid items={route.content.faqs} /> : null}
+        {route.content.faqs ? <FaqGrid items={route.content.faqs} /> : null}
+        {route.content.proofAssets ? <ProofGrid assets={route.content.proofAssets} /> : null}
         {route.id === "story" && route.content.reviewPlaceholder ? (
           <ReviewsPlaceholder
             body={route.content.reviewPlaceholder.body}

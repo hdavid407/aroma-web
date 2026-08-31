@@ -10,7 +10,11 @@ export type RouteId =
   | "contact"
   | "gallery"
   | "gift-cards"
-  | "careers";
+  | "careers"
+  | "visit"
+  | "reservations"
+  | "faq"
+  | "group-dining";
 
 export type SocialPlatform = "instagram" | "tiktok";
 
@@ -44,6 +48,7 @@ export type BusinessProfile = {
   email: string;
   emailHref: string;
   reservationUrl: string;
+  orderUrl: string;
   directionsUrl: string;
   socialLinks: SocialLink[];
   hours: HoursEntry[];
@@ -92,6 +97,7 @@ export type FaqItem = {
 };
 
 export type EventRecord = {
+  slug: string;
   id: string;
   title: string;
   startIso: string;
@@ -101,7 +107,24 @@ export type EventRecord = {
   summary: string;
   href?: string;
   recurringNote?: string;
+  image?: string;
   verified: boolean;
+};
+
+export type ProofAsset = {
+  kind:
+    | "testimonial"
+    | "press"
+    | "award"
+    | "google-business-profile"
+    | "photography";
+  title: string;
+  body: string;
+  source?: string;
+  href?: string;
+  image?: string;
+  imageAlt?: string;
+  approved: boolean;
 };
 
 export type GalleryItem = {
@@ -121,7 +144,7 @@ export type RouteContent = {
   primaryAction?: PageAction;
   secondaryAction?: PageAction;
   tertiaryAction?: PageAction;
-  orderingNote?: string;
+  proofAssets?: ProofAsset[];
   reviewPlaceholder?: {
     title: string;
     body: string;
@@ -133,6 +156,7 @@ export type RouteDefinition = {
   path: string;
   meta: RouteMeta;
   content: RouteContent;
+  event?: EventRecord;
 };
 
 export type RouteBreadcrumb = {
@@ -151,7 +175,7 @@ const BUSINESS_ADDRESS: BusinessAddress = {
 const BUSINESS_ADDRESS_CITY_LINE = `${BUSINESS_ADDRESS.addressLocality}, ${BUSINESS_ADDRESS.addressRegion} ${BUSINESS_ADDRESS.postalCode}`;
 
 export const businessProfile: BusinessProfile = {
-  name: "Aroma Gastrobar",
+  name: "Aroma Gastro Bar",
   address: BUSINESS_ADDRESS,
   addressLines: [BUSINESS_ADDRESS.streetAddress, BUSINESS_ADDRESS_CITY_LINE],
   fullAddress: `${BUSINESS_ADDRESS.streetAddress}, ${BUSINESS_ADDRESS_CITY_LINE}`,
@@ -160,6 +184,7 @@ export const businessProfile: BusinessProfile = {
   email: "aromagastrobar@gmail.com",
   emailHref: "mailto:aromagastrobar@gmail.com",
   reservationUrl: "https://calendar.app.google/cpmqknZ47F98bgRA8",
+  orderUrl: "https://aromagastrobar.com/menu",
   directionsUrl: MAPS_URL,
   socialLinks: [
     {
@@ -175,31 +200,102 @@ export const businessProfile: BusinessProfile = {
   ],
   hours: [
     { days: "Monday", hours: "Closed", status: "provisional" },
-    { days: "Tuesday", hours: "4 PM to 12 AM", status: "provisional" },
-    { days: "Wednesday", hours: "4 PM to 12 AM", status: "provisional" },
-    { days: "Thursday", hours: "4 PM to 2 AM", status: "provisional" },
-    { days: "Friday", hours: "4 PM to 2 AM", status: "provisional" },
-    { days: "Saturday", hours: "12 PM to 2 AM", status: "provisional" },
-    { days: "Sunday", hours: "12 PM to 2 AM", status: "provisional" },
+    { days: "Tuesday", hours: "5 PM to 12 AM", status: "provisional" },
+    { days: "Wednesday", hours: "5 PM to 12 AM", status: "provisional" },
+    { days: "Thursday", hours: "5 PM to 2 AM", status: "provisional" },
+    { days: "Friday", hours: "5 PM to 2 AM", status: "provisional" },
+    { days: "Saturday", hours: "5 PM to 2 AM", status: "provisional" },
+    { days: "Sunday", hours: "12 PM to 12 AM", status: "provisional" },
   ],
   cuisines: ["Dominican", "Latin fusion"],
   afterDarkNote: "Fri & Sat — Lounge after 10PM",
 };
+
+export const eventRecords: EventRecord[] = [
+  {
+    slug: "game-night",
+    id: "game-night-2026-09-02",
+    title: "Game Night",
+    startIso: "2026-09-02T17:00:00-04:00",
+    endIso: "2026-09-02T23:45:00-04:00",
+    displayDate: "Wednesday, September 2, 2026",
+    timeLabel: "5 PM to 11:45 PM",
+    summary:
+      "Aroma Gastro Bar's current midweek Game Night listing brings food, drinks, and social energy to Orlando.",
+    href: "https://aromagastrobar.com/events/Bom2sFNutRF1",
+    recurringNote: "Recurring event listing; confirm the current week's details before visiting.",
+    image: "lounge-01.jpg",
+    verified: true,
+  },
+  {
+    slug: "noche-toxica-friday",
+    id: "noche-toxica-friday-2026-09-04",
+    title: "Noche Toxica Friday",
+    startIso: "2026-09-04T22:00:00-04:00",
+    endIso: "2026-09-05T02:00:00-04:00",
+    displayDate: "Friday, September 4, 2026",
+    timeLabel: "10 PM to 2 AM",
+    summary:
+      "A late-night Aroma Social event with DJ music, cocktails, and the lounge energy that defines Friday nights.",
+    href: "https://aromagastrobar.com/events/CRctpwUc40BN",
+    recurringNote: "Recurring event listing; confirm the current week's details before visiting.",
+    image: "lounge-01.jpg",
+    verified: true,
+  },
+  {
+    slug: "rnb-saturdays",
+    id: "rnb-saturdays-2026-09-05",
+    title: "R&B Saturdays",
+    startIso: "2026-09-05T22:00:00-04:00",
+    endIso: "2026-09-06T02:00:00-04:00",
+    displayDate: "Saturday, September 5, 2026",
+    timeLabel: "10 PM to 2 AM",
+    summary:
+      "Aroma Social returns with smooth R&B, lounge energy, food and drinks, and limited reservation-based perks.",
+    href: "https://aromagastrobar.com/events/EIQqsARgdFDv",
+    recurringNote: "Public listing notes this event repeats every two weeks on Saturday.",
+    image: "lounge-01.jpg",
+    verified: true,
+  },
+  {
+    slug: "afro-caribbean-day-party",
+    id: "afro-caribbean-day-party-2026-08-15",
+    title: "Afro-Caribbean Day Party",
+    startIso: "2026-08-15T15:00:00-04:00",
+    endIso: "2026-08-15T22:00:00-04:00",
+    displayDate: "Saturday, August 15, 2026",
+    timeLabel: "3 PM to 10 PM",
+    summary:
+      "Past Aroma Social event retained in the record list so expired entries can drop out of generated pages automatically.",
+    href: "https://aromagastrobar.com/events/Z0hQVsxVmS8f",
+    image: "lounge-01.jpg",
+    verified: true,
+  },
+];
+
+export function isEventUpcoming(event: EventRecord, now = new Date()) {
+  const activeUntil = event.endIso ?? event.startIso;
+
+  return event.verified && new Date(activeUntil).getTime() > now.getTime();
+}
+
+export const upcomingEvents = (now = new Date()) =>
+  eventRecords.filter((event) => isEventUpcoming(event, now));
 
 export const canonicalRoutes: RouteDefinition[] = [
   {
     id: "home",
     path: "/",
     meta: {
-      title: "Aroma Gastrobar | Dominican Fusion Dining, Brunch & Late Nights in Orlando",
+      title: "Aroma Gastro Bar | Dominican Latin Fusion & Nightlife in Orlando",
       description:
-        "Aroma Gastrobar brings together Dominican-inspired plates, cocktails, brunch, and late-night energy in Orlando.",
-      eyebrow: "Aroma Gastrobar",
+        "Aroma Gastro Bar brings Dominican-rooted Latin fusion, cocktails, brunch, and late-night events to Azalea Park in Orlando.",
+      eyebrow: "Aroma Gastro Bar",
       heading: "Dominican roots. Global flavor.",
       intro:
-        "A contemporary Dominican kitchen, cocktail bar & late-night destination in Orlando.",
+        "A Dominican-rooted Latin-fusion restaurant, cocktail bar, and late-night destination in Azalea Park, Orlando.",
       heroImage: "hero-entrance-v2.png",
-      heroAlt: "Aroma Gastrobar entrance glowing at night",
+      heroAlt: "Aroma Gastro Bar entrance glowing at night",
     },
     content: {},
   },
@@ -207,15 +303,15 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "menu",
     path: "/menu/",
     meta: {
-      title: "Menu | Aroma Gastrobar Orlando",
+      title: "Dominican & Latin Fusion Menu | Aroma Gastro Bar Orlando",
       description:
-        "Browse Aroma Gastrobar menu highlights, from empanadas and ceviche to mofongo, sushi, desserts, and weekend brunch energy.",
+        "Explore Aroma Gastro Bar's curated Orlando menu of empanadas, mofongo, Dominican classics, sushi, brunch, cocktails, desserts, and late-night favorites.",
       eyebrow: "Menu",
       heading: "Bold plates, brunch energy, and late-night favorites.",
       intro:
-        "Explore public menu highlights from Aroma Gastrobar. Prices stay optional here so the team can update them manually when needed.",
+        "Explore signature Dominican-rooted plates, Latin-fusion favorites, sushi, brunch, cocktails, and late-night food before your visit.",
       heroImage: "food-01.jpg",
-      heroAlt: "A spread of Aroma Gastrobar dishes",
+      heroAlt: "A spread of Aroma Gastro Bar dishes",
     },
     content: {
       lead:
@@ -339,63 +435,41 @@ export const canonicalRoutes: RouteDefinition[] = [
         analytics: "directions-menu",
         external: true,
       },
-      orderingNote:
-        "Future online ordering will connect here after a first-party ordering destination is approved.",
+      tertiaryAction: {
+        label: "Order online",
+        href: businessProfile.orderUrl,
+        analytics: "order-menu",
+        external: true,
+      },
     },
   },
   {
     id: "events",
     path: "/events/",
     meta: {
-      title: "Events | Aroma Gastrobar Orlando",
+      title: "Orlando Nightlife & Events | Aroma Gastro Bar",
       description:
-        "See upcoming Aroma Gastrobar events and the late-night lounge programming that shapes weekends in Orlando.",
+        "Find Orlando nightlife at Aroma Gastro Bar: Game Night, Noche Toxica Fridays, R&B Saturdays, cocktails, DJs, and late-night food.",
       eyebrow: "Events",
-      heading: "Dinner, cocktails, and a lounge that stays in motion.",
+      heading: "Dinner, cocktails, and Orlando nights in motion.",
       intro:
-        "Aroma pairs dinner service with weekend lounge energy and a small hand-maintained list of upcoming events.",
+        "Aroma Gastro Bar pairs Dominican-rooted food with cocktails, DJs, recurring nightlife, and current events in Azalea Park, Orlando.",
       heroImage: "lounge-01.jpg",
       heroAlt: "Guests enjoying the Aroma lounge at night",
     },
     content: {
       lead:
-        "Fridays and Saturdays lean into after-dark energy, while Aroma Social programming keeps the calendar fresh without filling this page with stale event cards.",
+        "Friday and Saturday nights lean into after-dark energy, while Aroma Social programming keeps the calendar fresh without leaving guests to guess what is happening this week.",
       sections: [
         {
-          title: "What to expect",
+          title: "Orlando nightlife at Aroma",
           body: [
             "The lounge comes alive on Friday and Saturday nights after 10 PM with music, cocktails, and a more social pace.",
-            "Aroma Social programming can include paint-and-sip nights, domino competitions, curated networking events, and recurring party concepts.",
+            "Current programming includes Game Night, Noche Toxica Friday, and R&B Saturdays. Event details, dates, and times are maintained here as they are confirmed.",
           ],
         },
       ],
-      events: [
-        {
-          id: "rnb-saturdays-2026-09-05",
-          title: "R&B Saturdays",
-          startIso: "2026-09-05T22:00:00-04:00",
-          endIso: "2026-09-06T02:00:00-04:00",
-          displayDate: "Saturday, September 5, 2026",
-          timeLabel: "10 PM to 2 AM",
-          summary:
-            "Aroma Social returns with smooth R&B, lounge energy, food and drinks, and limited reservation-based perks.",
-          href: "https://aromagastrobar.com/events/EIQqsARgdFDv",
-          recurringNote: "Public listing notes this event repeats every two weeks on Saturday.",
-          verified: true,
-        },
-        {
-          id: "afro-caribbean-day-party-2026-08-15",
-          title: "Afro-Caribbean Day Party",
-          startIso: "2026-08-15T15:00:00-04:00",
-          endIso: "2026-08-15T22:00:00-04:00",
-          displayDate: "Saturday, August 15, 2026",
-          timeLabel: "3 PM to 10 PM",
-          summary:
-            "Past Aroma Social event retained in the record list so expired entries can drop out of the rendered page automatically.",
-          href: "https://aromagastrobar.com/events/Z0hQVsxVmS8f",
-          verified: true,
-        },
-      ],
+      events: eventRecords,
       primaryAction: {
         label: "Reserve your table",
         href: businessProfile.reservationUrl,
@@ -410,12 +484,212 @@ export const canonicalRoutes: RouteDefinition[] = [
     },
   },
   {
+    id: "visit",
+    path: "/visit/",
+    meta: {
+      title: "Visit Aroma Gastro Bar | Hours & Location in Orlando",
+      description:
+        "Plan a visit to Aroma Gastro Bar in Azalea Park, Orlando. Find the address, posted hours, directions, reservations, and online ordering.",
+      eyebrow: "Visit",
+      heading: "Your next Orlando night starts here.",
+      intro:
+        "Find Aroma Gastro Bar on North Semoran in Azalea Park, with current hours and the links you need for dinner, brunch, nightlife, or pickup.",
+      heroImage: "hero-interior.jpg",
+      heroAlt: "Dining room inside Aroma Gastro Bar in Orlando",
+    },
+    content: {
+      lead:
+        "Aroma Gastro Bar brings Dominican-rooted Latin-fusion food, cocktails, brunch, and late-night events together at 1700 N Semoran Blvd, Suite 118, Orlando, FL 32807.",
+      hoursNote:
+        "Hours shown here follow the current posted schedule and should be checked before special-event visits.",
+      primaryAction: {
+        label: "Get directions",
+        href: businessProfile.directionsUrl,
+        analytics: "directions-visit",
+        external: true,
+      },
+      secondaryAction: {
+        label: "Reserve your table",
+        href: businessProfile.reservationUrl,
+        analytics: "reserve-visit",
+        external: true,
+      },
+      tertiaryAction: {
+        label: "Order online",
+        href: businessProfile.orderUrl,
+        analytics: "order-visit",
+        external: true,
+      },
+    },
+  },
+  {
+    id: "reservations",
+    path: "/reservations/",
+    meta: {
+      title: "Reservations | Aroma Gastro Bar Orlando",
+      description:
+        "Reserve a table at Aroma Gastro Bar in Orlando for Dominican-rooted Latin-fusion dining, brunch, cocktails, and late-night events.",
+      eyebrow: "Reservations",
+      heading: "Make the night yours.",
+      intro:
+        "Use Aroma's reservation link to plan dinner, brunch, celebrations, and nights built around the lounge.",
+      heroImage: "lounge-01.jpg",
+      heroAlt: "A lively evening at Aroma Gastro Bar",
+    },
+    content: {
+      lead:
+        "A reservation gives your group a clear starting point for food, drinks, music, and the late-night energy of Aroma Gastro Bar.",
+      sections: [
+        {
+          title: "Planning a larger gathering",
+          body: [
+            "For group dining, private events, or a celebration with extra details, contact the team directly so they can guide the best next step.",
+            "For current event nights, check the Events page before reserving so your plans line up with the latest program details.",
+          ],
+        },
+      ],
+      primaryAction: {
+        label: "Reserve your table",
+        href: businessProfile.reservationUrl,
+        analytics: "reserve-reservations",
+        external: true,
+      },
+      secondaryAction: {
+        label: "Call Aroma",
+        href: businessProfile.phoneHref,
+        analytics: "reservations-phone",
+      },
+      tertiaryAction: {
+        label: "Visit information",
+        href: "/visit/",
+        analytics: "visit-reservations",
+      },
+    },
+  },
+  {
+    id: "faq",
+    path: "/faq/",
+    meta: {
+      title: "Aroma Gastro Bar FAQ | Orlando Dining & Nightlife",
+      description:
+        "Get answers about Aroma Gastro Bar in Orlando, including cuisine, hours, reservations, online ordering, brunch, events, and location.",
+      eyebrow: "FAQ",
+      heading: "The useful details, all in one place.",
+      intro:
+        "Answers for planning dinner, brunch, ordering, reservations, and an after-dark visit to Aroma Gastro Bar.",
+      heroImage: "interior-detail.jpg",
+      heroAlt: "Interior detail at Aroma Gastro Bar",
+    },
+    content: {
+      lead:
+        "If you are deciding where to eat, meet, celebrate, or spend the night in Orlando, these are the details guests ask about most.",
+      faqs: [
+        {
+          question: "Where is Aroma Gastro Bar located?",
+          answer:
+            "Aroma Gastro Bar is at 1700 N Semoran Blvd, Suite 118, Orlando, FL 32807, in the Azalea Park area.",
+        },
+        {
+          question: "What kind of food does Aroma serve?",
+          answer:
+            "Aroma serves Dominican-rooted Latin-fusion food, including empanadas, wings, ceviche, mofongo, La Bandera, Chofan Dominicano, sushi, desserts, and other shareable plates.",
+        },
+        {
+          question: "Does Aroma offer brunch?",
+          answer:
+            "Weekend brunch is part of the Aroma experience. The lineup and hours can change, so call ahead or check the current reservation details before visiting.",
+        },
+        {
+          question: "Can I reserve a table?",
+          answer:
+            "Yes. Use the reservations link on this site to choose the current booking option for Aroma Gastro Bar.",
+        },
+        {
+          question: "Does Aroma offer online ordering?",
+          answer:
+            "Yes. Online ordering for pickup and delivery is available through Aroma's live ordering menu.",
+        },
+        {
+          question: "What happens at Aroma after dark?",
+          answer:
+            "Friday and Saturday nights lean into lounge energy after 10 PM, with cocktails, music, DJs, and recurring Aroma Social events.",
+        },
+        {
+          question: "How do I ask about a group or private event?",
+          answer:
+            "Call or email Aroma with your date, guest count, and event details so the team can guide the right group-dining or catering conversation.",
+        },
+      ],
+      primaryAction: {
+        label: "Reserve your table",
+        href: businessProfile.reservationUrl,
+        analytics: "reserve-faq",
+        external: true,
+      },
+      secondaryAction: {
+        label: "Get directions",
+        href: businessProfile.directionsUrl,
+        analytics: "directions-faq",
+        external: true,
+      },
+      tertiaryAction: {
+        label: "Contact Aroma",
+        href: "/contact/",
+        analytics: "contact-faq",
+      },
+    },
+  },
+  {
+    id: "group-dining",
+    path: "/group-dining/",
+    meta: {
+      title: "Group Dining & Private Events | Aroma Gastro Bar Orlando",
+      description:
+        "Ask Aroma Gastro Bar about group dining, private events, celebrations, and catering in Orlando through direct phone or email contact.",
+      eyebrow: "Group Dining",
+      heading: "Bring your people. We will help shape the plan.",
+      intro:
+        "Start a group-dining, private-event, or celebration conversation with the Aroma Gastro Bar team in Orlando.",
+      heroImage: "food-03.jpg",
+      heroAlt: "Plated dishes prepared for group dining at Aroma Gastro Bar",
+    },
+    content: {
+      lead:
+        "Aroma is built for dinner plans, birthdays, office gatherings, and nights that need food, drinks, and a social room in one place.",
+      sections: [
+        {
+          title: "Start with the details",
+          body: [
+            "Share your preferred date, guest count, occasion, and whether you are considering dining at Aroma or catering elsewhere.",
+            "The team can talk through menu fit, timing, reservations, and the next step for your group.",
+          ],
+        },
+      ],
+      primaryAction: {
+        label: "Call Aroma",
+        href: businessProfile.phoneHref,
+        analytics: "group-dining-phone",
+      },
+      secondaryAction: {
+        label: "Email Aroma",
+        href: businessProfile.emailHref,
+        analytics: "group-dining-email",
+      },
+      tertiaryAction: {
+        label: "Reserve a table",
+        href: businessProfile.reservationUrl,
+        analytics: "group-dining-reserve",
+        external: true,
+      },
+    },
+  },
+  {
     id: "catering",
     path: "/catering/",
     meta: {
-      title: "Catering & Group Dining | Aroma Gastrobar Orlando",
+      title: "Catering & Group Dining | Aroma Gastro Bar Orlando",
       description:
-        "Plan catering, private dining, or group celebrations with Aroma Gastrobar through direct phone and email contact.",
+        "Plan catering, private dining, or group celebrations with Aroma Gastro Bar through direct phone and email contact.",
       eyebrow: "Catering",
       heading: "Start the conversation directly with the team.",
       intro:
@@ -474,15 +748,15 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "story",
     path: "/story/",
     meta: {
-      title: "Story | Aroma Gastrobar Orlando",
+      title: "Story | Aroma Gastro Bar Orlando",
       description:
-        "Learn how Aroma Gastrobar brings Dominican inspiration, cocktails, brunch, and lounge energy together under one roof in Orlando.",
+        "Learn how Aroma Gastro Bar brings Dominican inspiration, cocktails, brunch, and lounge energy together under one roof in Orlando.",
       eyebrow: "Story",
       heading: "One room, several moods, one clear point of view.",
       intro:
         "Aroma moves between dinner, cocktails, brunch, and after-dark lounge energy without losing the through-line of Dominican-rooted hospitality.",
       heroImage: "interior-detail.jpg",
-      heroAlt: "Interior detail inside Aroma Gastrobar",
+      heroAlt: "Interior detail inside Aroma Gastro Bar",
     },
     content: {
       lead:
@@ -525,19 +799,19 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "contact",
     path: "/contact/",
     meta: {
-      title: "Contact | Aroma Gastrobar Orlando",
+      title: "Contact | Aroma Gastro Bar Orlando",
       description:
-        "Find Aroma Gastrobar in Orlando, view current posted hours, and get direct phone, email, reservation, and directions links.",
+        "Find Aroma Gastro Bar in Orlando, view current posted hours, and get direct phone, email, reservation, and directions links.",
       eyebrow: "Contact",
       heading: "Plan the visit without hunting for details.",
       intro:
         "Address, phone, email, posted hours, reservation access, and directions all stay in one place here.",
       heroImage: "hero-interior.jpg",
-      heroAlt: "A dining view inside Aroma Gastrobar",
+      heroAlt: "A dining view inside Aroma Gastro Bar",
     },
     content: {
       lead:
-        "Aroma Gastrobar is located on North Semoran in Orlando, with direct reservation and contact links ready for dinner plans, brunch, and late-night visits.",
+        "Aroma Gastro Bar is located on North Semoran in Orlando, with direct reservation and contact links ready for dinner plans, brunch, and late-night visits.",
       hoursNote:
         "Hours shown here are the current posted schedule being used as provisional content for this project.",
       primaryAction: {
@@ -563,15 +837,15 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "gallery",
     path: "/gallery/",
     meta: {
-      title: "Gallery | Aroma Gastrobar Orlando",
+      title: "Gallery | Aroma Gastro Bar Orlando",
       description:
-        "Browse a quick visual look at Aroma Gastrobar dining, cocktails, brunch, and late-night atmosphere.",
+        "Browse a quick visual look at Aroma Gastro Bar dining, cocktails, brunch, and late-night atmosphere.",
       eyebrow: "Gallery",
       heading: "A quick look at the room, the plates, and the mood.",
       intro:
         "The gallery keeps the focus on the same imagery already carrying the homepage: dining, drinks, brunch, and the lounge.",
       heroImage: "drinks-02.jpg",
-      heroAlt: "Cocktails at Aroma Gastrobar",
+      heroAlt: "Cocktails at Aroma Gastro Bar",
     },
     content: {
       lead:
@@ -579,17 +853,17 @@ export const canonicalRoutes: RouteDefinition[] = [
       gallery: [
         {
           image: "hero-entrance-v2.png",
-          alt: "Aroma Gastrobar exterior at night",
+          alt: "Aroma Gastro Bar exterior at night",
           caption: "Night arrival sets the tone before dinner and lounge hours.",
         },
         {
           image: "food-02.jpg",
-          alt: "A plated dish from Aroma Gastrobar",
+          alt: "A plated dish from Aroma Gastro Bar",
           caption: "Dominican-rooted dishes stay central to the experience.",
         },
         {
           image: "brunch-02.png",
-          alt: "A brunch dish at Aroma Gastrobar",
+          alt: "A brunch dish at Aroma Gastro Bar",
           caption: "Weekend brunch keeps its own energy without leaving the main concept behind.",
         },
         {
@@ -615,15 +889,15 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "gift-cards",
     path: "/gift-cards/",
     meta: {
-      title: "Gift Card Information | Aroma Gastrobar Orlando",
+      title: "Gift Card Information | Aroma Gastro Bar Orlando",
       description:
-        "Contact Aroma Gastrobar directly for gift card information and in-house guidance.",
+        "Contact Aroma Gastro Bar directly for gift card information and in-house guidance.",
       eyebrow: "Gift Cards",
       heading: "Handle gift card questions with the restaurant directly.",
       intro:
         "This route gives guests a simple place to ask about gift card information without inventing a checkout flow that is not connected yet.",
       heroImage: "drinks-01.jpg",
-      heroAlt: "A cocktail at Aroma Gastrobar",
+      heroAlt: "A cocktail at Aroma Gastro Bar",
     },
     content: {
       lead:
@@ -659,15 +933,15 @@ export const canonicalRoutes: RouteDefinition[] = [
     id: "careers",
     path: "/careers/",
     meta: {
-      title: "Careers | Aroma Gastrobar Orlando",
+      title: "Careers | Aroma Gastro Bar Orlando",
       description:
-        "Contact Aroma Gastrobar directly for employment information and hiring-related questions in Orlando.",
+        "Contact Aroma Gastro Bar directly for employment information and hiring-related questions in Orlando.",
       eyebrow: "Careers",
       heading: "Reach out if you'd like to work with the team.",
       intro:
         "This route gives applicants a direct line for employment information without pretending there is a staffed applicant portal behind the page.",
       heroImage: "food-03.jpg",
-      heroAlt: "Plated dinner service at Aroma Gastrobar",
+      heroAlt: "Plated dinner service at Aroma Gastro Bar",
     },
     content: {
       lead:
@@ -704,9 +978,64 @@ export const routeById = Object.fromEntries(
   canonicalRoutes.map((route) => [route.id, route]),
 ) as Record<RouteId, RouteDefinition>;
 
+export const eventRoutes: RouteDefinition[] = upcomingEvents().map((event) => ({
+  id: "events",
+  path: `/events/${event.slug}/`,
+  meta: {
+    title: `${event.title} | Aroma Gastro Bar Orlando`,
+    description: `${event.title} at Aroma Gastro Bar in Orlando on ${event.displayDate}. Find event details, timing, food, drinks, and reservations.`,
+    eyebrow: "Events",
+    heading: event.title,
+    intro: `${event.displayDate} · ${event.timeLabel} · Aroma Gastro Bar, Orlando.`,
+    heroImage: event.image ?? "lounge-01.jpg",
+    heroAlt: `${event.title} at Aroma Gastro Bar`,
+  },
+  content: {
+    lead: event.summary,
+    sections: [
+      {
+        title: "Plan your night",
+        body: [
+          `${event.title} is part of Aroma Gastro Bar's current Orlando nightlife programming.`,
+          "The full food and drink experience is available for guests planning dinner, drinks, and late-night energy around the event.",
+          event.recurringNote ?? "Check the Events page for future dates and current program updates.",
+        ],
+      },
+    ],
+    primaryAction: {
+      label: "Reserve your table",
+      href: businessProfile.reservationUrl,
+      analytics: "reserve-event-detail",
+      external: true,
+    },
+    secondaryAction: {
+      label: "See all events",
+      href: "/events/",
+      analytics: "events-event-detail",
+    },
+    tertiaryAction: {
+      label: "Order online",
+      href: businessProfile.orderUrl,
+      analytics: "order-event-detail",
+      external: true,
+    },
+  },
+  event,
+}));
+
+export const allRoutes = [...canonicalRoutes, ...eventRoutes];
+
 export function getRouteBreadcrumbs(route: RouteDefinition): RouteBreadcrumb[] {
   if (route.id === "home") {
     return [];
+  }
+
+  if (route.event) {
+    return [
+      { name: "Home", path: routeById.home.path },
+      { name: "Events", path: routeById.events.path },
+      { name: route.event.title, path: route.path },
+    ];
   }
 
   return [
@@ -716,7 +1045,7 @@ export function getRouteBreadcrumbs(route: RouteDefinition): RouteBreadcrumb[] {
 }
 
 const routeByPath = Object.fromEntries(
-  canonicalRoutes.map((route) => [route.path, route]),
+  allRoutes.map((route) => [route.path, route]),
 ) as Record<string, RouteDefinition>;
 
 export function normalizeRoutePath(pathname: string, basePath = "/") {

@@ -2,7 +2,9 @@ import {
   businessProfile,
   getRouteBreadcrumbs,
   routeById,
+  isEventUpcoming,
   type HoursEntry,
+  type EventRecord,
   type RouteDefinition,
 } from "./siteContent";
 
@@ -154,6 +156,36 @@ const breadcrumbGraphNode = (
   })),
 });
 
+const eventGraphNode = (
+  event: EventRecord,
+  canonicalUrl: string,
+  imageUrl: string,
+  restaurantId: string,
+) => ({
+  "@type": "Event",
+  "@id": `${canonicalUrl}#event`,
+  name: event.title,
+  startDate: event.startIso,
+  ...(event.endIso ? { endDate: event.endIso } : {}),
+  eventStatus: "https://schema.org/EventScheduled",
+  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  image: [imageUrl],
+  url: canonicalUrl,
+  location: {
+    "@type": "Place",
+    name: businessProfile.name,
+    address: {
+      "@type": "PostalAddress",
+      ...businessProfile.address,
+    },
+  },
+  organizer: {
+    "@id": restaurantId,
+    "@type": "Restaurant",
+    name: businessProfile.name,
+  },
+});
+
 const buildJsonLdGraph = (
   route: RouteDefinition,
   canonicalUrl: string,
@@ -207,6 +239,9 @@ const buildJsonLdGraph = (
       ...(route.id === "home"
         ? []
         : [breadcrumbGraphNode(route, canonicalUrl, siteOrigin, basePath)]),
+      ...(route.event && isEventUpcoming(route.event)
+        ? [eventGraphNode(route.event, canonicalUrl, imageUrl, restaurantId)]
+        : []),
       ...menuGraphNodes(route, canonicalUrl),
     ],
   };
