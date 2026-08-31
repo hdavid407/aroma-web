@@ -8,6 +8,10 @@ const canonicalEntries = [
   ["/", "/", "index.html"],
   ["/menu/", "/menu/", "menu/index.html"],
   ["/events/", "/events/", "events/index.html"],
+  ["/visit/", "/visit/", "visit/index.html"],
+  ["/reservations/", "/reservations/", "reservations/index.html"],
+  ["/faq/", "/faq/", "faq/index.html"],
+  ["/group-dining/", "/group-dining/", "group-dining/index.html"],
   ["/catering/", "/catering/", "catering/index.html"],
   ["/story/", "/story/", "story/index.html"],
   ["/contact/", "/contact/", "contact/index.html"],
@@ -24,7 +28,15 @@ const aliasEntries = [
   ["/happyhour/", "/menu/", "happyhour/index.html"],
 ];
 
-const routeEntries = [...canonicalEntries, ...aliasEntries];
+const discoveredEntries = await discoverRouteEntries();
+const dynamicEntries = discoveredEntries.filter(
+  ([entryPath, renderPath]) =>
+    entryPath === renderPath &&
+    entryPath.startsWith("/events/") &&
+    entryPath !== "/events/",
+);
+const canonicalRouteEntries = [...canonicalEntries, ...dynamicEntries];
+const routeEntries = [...canonicalRouteEntries, ...aliasEntries];
 const homeHtml = await readOutput("index.html");
 const homeCanonical = extractSingle(
   homeHtml,
@@ -65,6 +77,7 @@ for (const [entryPath, renderPath, htmlPath] of routeEntries) {
     html.slice(root.index + root[0].length).includes("<main"),
     `${htmlPath} does not contain prerendered App markup`,
   );
+  assertRouteContent(html, htmlPath, renderPath, basePath);
 
   const title = extractSingle(html, /<title>([^<]+)<\/title>/gu, `${htmlPath} title`);
   const description = extractSingle(
@@ -81,7 +94,15 @@ for (const [entryPath, renderPath, htmlPath] of routeEntries) {
 
   assert(canonical === expectedCanonical, `${htmlPath} canonical is ${canonical}`);
   assertMetadata(html, htmlPath, title, description, canonical);
-  assertStructuredData(html, htmlPath, renderPath, canonical, homeCanonical, basePath);
+  assertStructuredData(
+    html,
+    htmlPath,
+    renderPath,
+    canonical,
+    homeCanonical,
+    basePath,
+    dynamicEntries.some(([path]) => path === renderPath),
+  );
 
   const metadata = { title, description, canonical };
 
@@ -153,7 +174,84 @@ function assertMetadata(html, htmlPath, title, description, canonical) {
   assert(twitterImage === ogImage, `${htmlPath} social images do not match`);
 }
 
-function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome, basePath) {
+function assertRouteContent(html, htmlPath, renderPath, basePath) {
+  const h1Count = html.match(/<h1\b/gu)?.length ?? 0;
+
+  assert(h1Count === 1, `${htmlPath} must contain exactly one H1`);
+
+  const heroClass = renderPath === "/" ? "hero-image" : "page-hero-image";
+  assert(html.includes(`class="${heroClass}"`), `${htmlPath} hero layer is missing`);
+
+  const internalLinks = [...html.matchAll(/\bhref="(\/[^"#]*)"/gu)].map(
+    ([, href]) => href,
+  );
+  const normalizedBasePath = basePath === "/" ? "/" : basePath.replace(/\/$/u, "");
+
+  for (const href of internalLinks) {
+    assert(
+      normalizedBasePath === "/" || href === normalizedBasePath || href.startsWith(`${normalizedBasePath}/`),
+      `${htmlPath} contains a root-relative link that ignores the ${basePath} base path: ${href}`,
+    );
+  }
+
+  const requiredAnalytics = renderPath.startsWith("/events/") && renderPath !== "/events/"
+    ? ["reserve-event-detail", "events-event-detail", "order-event-detail"]
+    : {
+    "/": ["reserve-hero", "menu-hero"],
+    "/menu/": ["reserve-menu", "directions-menu", "order-menu"],
+    "/events/": ["reserve-events", "contact-events", "event-detail"],
+    "/visit/": ["directions-visit", "reserve-visit", "order-visit"],
+    "/reservations/": ["reserve-reservations", "reservations-phone", "visit-reservations"],
+    "/faq/": ["reserve-faq", "directions-faq", "contact-faq"],
+    "/group-dining/": ["group-dining-phone", "group-dining-email", "group-dining-reserve"],
+    "/catering/": ["catering-phone", "catering-email", "directions-catering"],
+    "/story/": ["menu-story", "reserve-story"],
+    "/contact/": ["directions-contact", "reserve-contact", "contact-phone"],
+    "/gallery/": ["reserve-gallery", "menu-gallery"],
+    "/gift-cards/": ["gift-card-phone", "gift-card-email", "reserve-gift-cards"],
+    "/careers/": ["careers-email", "careers-phone", "menu-careers"],
+    }[renderPath] ?? [];
+
+  for (const analyticsId of requiredAnalytics) {
+    assert(
+      html.includes(`data-analytics="${analyticsId}"`),
+      `${htmlPath} is missing analytics hook ${analyticsId}`,
+    );
+  }
+
+  if (renderPath === "/events/") {
+    const eventEndDates = [...html.matchAll(/data-event-end="([^"]+)"/gu)].map(
+      ([, endDate]) => endDate,
+    );
+    const eventLinks = [...html.matchAll(/href="(\/events\/[^"#]+\/?)"/gu)].map(
+      ([, href]) => href,
+    );
+
+    for (const endDate of eventEndDates) {
+      assert(
+        new Date(endDate).getTime() > Date.now(),
+        `${htmlPath} renders an expired event ending ${endDate}`,
+      );
+    }
+
+    for (const href of eventLinks) {
+      assert(
+        dynamicEntries.some(([entryPath]) => entryPath === href),
+        `${htmlPath} links to an event detail page that was not generated: ${href}`,
+      );
+    }
+  }
+}
+
+function assertStructuredData(
+  html,
+  htmlPath,
+  renderPath,
+  canonical,
+  siteHome,
+  basePath,
+  isEventRoute,
+) {
   const jsonText = extractSingle(
     html,
     /<script type="application\/ld\+json">([\s\S]*?)<\/script>/gu,
@@ -175,6 +273,7 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome, b
     `${htmlPath} Restaurant ID is not stable`,
   );
   assert(webPage?.url === canonical, `${htmlPath} WebPage URL does not match its canonical`);
+  assert(restaurant.name === "Aroma Gastro Bar", `${htmlPath} restaurant name is unsupported`);
   assert(restaurant.telephone === "+14072379661", `${htmlPath} telephone is unsupported`);
   assert(
     JSON.stringify(restaurant.servesCuisine) === JSON.stringify(["Dominican", "Latin fusion"]),
@@ -220,8 +319,34 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome, b
   assertNoReviewSchema(document, htmlPath);
   assertMenuSchema(document, html, htmlPath, renderPath, canonical);
   assertBreadcrumbSchema(document, html, htmlPath, renderPath, canonical, siteHome, basePath);
-  assertNoEventOrFaqSchema(document, htmlPath);
+  assertEventSchema(document, html, htmlPath, canonical, isEventRoute);
+  assertNoFaqSchema(document, htmlPath);
   assertSafeOutput(serialized, `${htmlPath} JSON-LD`);
+}
+
+function assertEventSchema(document, html, htmlPath, canonical, isEventRoute) {
+  const eventNodes = collectTypedNodes(document, "Event");
+
+  if (!isEventRoute) {
+    assert(eventNodes.length === 0, `${htmlPath} contains Event schema`);
+    return;
+  }
+
+  assert(eventNodes.length === 1, `${htmlPath} must contain one Event node`);
+  const event = eventNodes[0];
+
+  assert(event.url === canonical, `${htmlPath} Event URL does not match its canonical`);
+  assert(typeof event.name === "string" && event.name.length > 0, `${htmlPath} Event is missing a name`);
+  assert(typeof event.startDate === "string" && event.startDate.length > 0, `${htmlPath} Event is missing startDate`);
+  assert(event.location?.address?.postalCode === "32807", `${htmlPath} Event location is unsupported`);
+  assert(html.includes(escapeHtml(event.name)), `${htmlPath} Event name is not visible in route content`);
+}
+
+function assertNoFaqSchema(document, htmlPath) {
+  assert(
+    collectTypedNodes(document, "FAQPage").length === 0,
+    `${htmlPath} contains FAQPage schema`,
+  );
 }
 
 function assertBreadcrumbSchema(document, html, htmlPath, renderPath, canonical, siteHome, basePath) {
@@ -273,10 +398,17 @@ function assertBreadcrumbSchema(document, html, htmlPath, renderPath, canonical,
     assert(schemaItem.position === index + 1, `${htmlPath} breadcrumb positions are inconsistent`);
     assert(schemaItem.name === visibleItem.name, `${htmlPath} breadcrumb names are inconsistent`);
 
-    const expectedItemUrl = index === 0 ? siteHome : canonical;
+    const expectedItemUrl = visibleItem.href
+      ? siteUrlForVisibleHref(visibleItem.href, siteHome, basePath)
+      : canonical;
     assert(schemaItem.item === expectedItemUrl, `${htmlPath} breadcrumb URLs are inconsistent`);
 
-    const expectedVisibleHref = index === 0 ? basePath : undefined;
+    const expectedVisibleHref =
+      index === visibleItems.length - 1
+        ? undefined
+        : index === 0
+          ? basePath
+          : `${basePath}events/`;
     assert(visibleItem.href === expectedVisibleHref, `${htmlPath} visible breadcrumb link is inconsistent`);
   }
 
@@ -325,17 +457,6 @@ function assertMenuSchema(document, html, htmlPath, renderPath, canonical) {
   );
 }
 
-function assertNoEventOrFaqSchema(document, htmlPath) {
-  assert(
-    collectTypedNodes(document, "Event").length === 0,
-    `${htmlPath} contains Event schema`,
-  );
-  assert(
-    collectTypedNodes(document, "FAQPage").length === 0,
-    `${htmlPath} contains FAQPage schema`,
-  );
-}
-
 function assertNoReviewSchema(document, htmlPath) {
   assert(
     collectTypedNodes(document, "Review").length === 0,
@@ -378,7 +499,7 @@ async function assertCrawlFiles(siteHome) {
   const sitemapLocations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/gu)].map(
     (match) => match[1],
   );
-  const expectedLocations = canonicalEntries.map(([, routePath]) =>
+  const expectedLocations = canonicalRouteEntries.map(([, routePath]) =>
     `${siteHome}${routePath === "/" ? "" : routePath.slice(1)}`,
   );
 
@@ -444,7 +565,7 @@ async function assertFallback(expectedBasePath) {
     `404 does not contain the direct ${expectedContactHref} Contact link`,
   );
   assert(html.includes('content="noindex, follow"'), "404 must remain noindex, follow");
-  assert(html.includes("<title>Page Not Found | Aroma Gastrobar</title>"), "404 title is not helpful");
+  assert(html.includes("<title>Page Not Found | Aroma Gastro Bar</title>"), "404 title is not helpful");
   assert(!/<script\b/iu.test(html), "404 must not force a JavaScript redirect");
   assert(!html.includes("window.location"), "404 must not redirect with JavaScript");
   assert(!html.includes("__AROMA_"), "404 retains a build placeholder");
@@ -488,6 +609,18 @@ function extractSingle(value, pattern, label) {
 
 function readAttribute(attributes, attributeName) {
   return attributes.match(new RegExp(`\\b${attributeName}="([^"]+)"`, "u"))?.[1];
+}
+
+function siteUrlForVisibleHref(href, siteHome, basePath) {
+  if (href === basePath) {
+    return siteHome;
+  }
+
+  const relativePath = href.startsWith(basePath)
+    ? href.slice(basePath.length)
+    : href.replace(/^\/+/, "");
+
+  return `${siteHome}${relativePath}`;
 }
 
 function assertUnique(values, label) {
@@ -535,4 +668,32 @@ async function collectFiles(directoryPath) {
   );
 
   return nested.flat();
+}
+
+async function discoverRouteEntries() {
+  const files = await collectFiles(distDirectory);
+  const htmlFiles = files.filter((filePath) => filePath.endsWith(".html"));
+  const entries = [];
+
+  for (const filePath of htmlFiles) {
+    const html = await readFile(filePath, "utf8");
+    const root = html.match(/<div\b(?=[^>]*\bid="root")(?<attributes>[^>]*)>/u);
+
+    if (!root?.groups) {
+      continue;
+    }
+
+    const entryPath = readAttribute(root.groups.attributes, "data-route-path");
+    const renderPath = readAttribute(root.groups.attributes, "data-render-path");
+
+    if (entryPath && renderPath) {
+      entries.push([
+        entryPath,
+        renderPath,
+        path.relative(distDirectory, filePath).replaceAll("\\", "/"),
+      ]);
+    }
+  }
+
+  return entries;
 }

@@ -1,4 +1,5 @@
 import {
+  allRoutes,
   canonicalRoutes,
   routeById,
   type RouteDefinition,
@@ -28,7 +29,7 @@ export const routeHtmlPath = (routePath: string) =>
   routePath === "/" ? "index.html" : `${routePath.slice(1)}index.html`;
 
 const routeByPath = new Map(
-  canonicalRoutes.map((route) => [route.path, route] as const),
+  allRoutes.map((route) => [route.path, route] as const),
 );
 
 const createRouteEntry = (
@@ -52,7 +53,11 @@ const createRouteEntry = (
   };
 };
 
-const canonicalEntries = canonicalRoutes.map((route) =>
+const canonicalEntries = allRoutes.map((route) =>
+  createRouteEntry(route.path, route.path, false),
+);
+
+const staticCanonicalEntries = canonicalRoutes.map((route) =>
   createRouteEntry(route.path, route.path, false),
 );
 
@@ -65,7 +70,9 @@ export const routeEntries: RouteEntry[] = [
   ...aliasEntries,
 ];
 
-export const routeHtmlInputs = routeEntries.map((entry) => entry.htmlPath);
+export const routeHtmlInputs = [...staticCanonicalEntries, ...aliasEntries].map(
+  (entry) => entry.htmlPath,
+);
 
 const routeEntryByHtmlPath = new Map(
   routeEntries.map((entry) => [entry.htmlPath, entry] as const),
@@ -75,4 +82,4 @@ export const findRouteEntryByHtmlPath = (htmlPath: string) =>
   routeEntryByHtmlPath.get(htmlPath.replaceAll("\\", "/"));
 
 export const routeDefinitionForEntry = (entry: RouteEntry) =>
-  routeById[entry.routeId];
+  routeByPath.get(entry.renderPath) ?? routeById[entry.routeId];
