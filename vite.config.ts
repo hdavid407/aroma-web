@@ -7,12 +7,10 @@ import {
 } from "./src/routeManifest";
 import {
   buildRouteHeadHtml,
-  buildSiteUrl,
   DEFAULT_SITE_ORIGIN,
 } from "./src/seo";
 
 const ROUTE_HEAD_MARKER = '<meta name="route-head" content="pending" />';
-const FALLBACK_SCRIPT_MARKER = "__AROMA_FALLBACK_SCRIPT__";
 
 const normalizeBasePath = (basePath: string) =>
   basePath === "/" ? "/" : `${basePath.replace(/^\/+|\/+$/gu, "")}/`;
@@ -21,30 +19,6 @@ const baseRouteUrl = (basePath: string, routePath: string) =>
   basePath === "/"
     ? routePath
     : `/${normalizeBasePath(basePath).replace(/^\//u, "")}${routePath.replace(/^\//u, "")}`;
-
-const buildFallbackScript = (basePath: string) => {
-  const normalizedBase = `/${normalizeBasePath(basePath)}`.replace(/\/+/gu, "/");
-
-  return `(() => {
-  const basePath = ${JSON.stringify(normalizedBase)};
-  const pathname = window.location.pathname;
-  const routePath = basePath !== "/" && pathname.startsWith(basePath)
-    ? "/" + pathname.slice(basePath.length)
-    : pathname;
-  const normalizedRoute = routePath === "/"
-    ? "/"
-    : routePath.replace(/\\/+$/u, "") + "/";
-  const isLegacyTaxonomy = normalizedRoute === "/tags/"
-    || normalizedRoute.startsWith("/tags/")
-    || normalizedRoute === "/places/"
-    || normalizedRoute.startsWith("/places/");
-  const targetRoute = isLegacyTaxonomy ? "/menu/" : "/";
-  const destination = basePath === "/"
-    ? targetRoute
-    : basePath + targetRoute.slice(1);
-  window.location.replace(destination);
-})();`;
-};
 
 const routeHeadPlugin = (siteOrigin: string): Plugin => {
   let resolvedConfig: ResolvedConfig;
@@ -66,20 +40,12 @@ const routeHeadPlugin = (siteOrigin: string): Plugin => {
         if (htmlPath === "404.html") {
           const fallbackHome = baseRouteUrl(resolvedConfig.base, "/");
           const fallbackMenu = baseRouteUrl(resolvedConfig.base, "/menu/");
-          const fallbackMenuCanonical = buildSiteUrl(
-            siteOrigin,
-            resolvedConfig.base,
-            "/menu/",
-          );
+          const fallbackContact = baseRouteUrl(resolvedConfig.base, "/contact/");
 
           return html
-            .replace(FALLBACK_SCRIPT_MARKER, buildFallbackScript(resolvedConfig.base))
             .replaceAll("__AROMA_FALLBACK_HOME__", fallbackHome)
             .replaceAll("__AROMA_FALLBACK_MENU__", fallbackMenu)
-            .replaceAll(
-              "__AROMA_FALLBACK_MENU_CANONICAL__",
-              fallbackMenuCanonical,
-            );
+            .replaceAll("__AROMA_FALLBACK_CONTACT__", fallbackContact);
         }
 
         const entry = findRouteEntryByHtmlPath(htmlPath);

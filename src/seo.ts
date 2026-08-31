@@ -1,7 +1,6 @@
 import {
   businessProfile,
   routeById,
-  type EventRecord,
   type HoursEntry,
   type RouteDefinition,
 } from "./siteContent";
@@ -98,13 +97,6 @@ const openingHoursSpecification = (hours: HoursEntry[]) =>
     ];
   });
 
-const isUpcomingEvent = (event: EventRecord, now = new Date()) => {
-  const activeUntil = event.endIso ?? event.startIso;
-  const timestamp = Date.parse(activeUntil);
-
-  return event.verified && Number.isFinite(timestamp) && timestamp > now.getTime();
-};
-
 const menuGraphNodes = (route: RouteDefinition, canonicalUrl: string) => {
   if (!route.content.menuSections?.length) {
     return [];
@@ -137,54 +129,6 @@ const menuGraphNodes = (route: RouteDefinition, canonicalUrl: string) => {
               }
             : {}),
         })),
-      })),
-    },
-  ];
-};
-
-const eventGraphNodes = (
-  route: RouteDefinition,
-  canonicalUrl: string,
-  restaurantId: string,
-) =>
-  (route.content.events ?? [])
-    .filter((event) => isUpcomingEvent(event))
-    .map((event) => ({
-      "@type": "Event",
-      "@id": `${canonicalUrl}#event-${event.id}`,
-      name: event.title,
-      startDate: event.startIso,
-      ...(event.endIso ? { endDate: event.endIso } : {}),
-      description: event.summary,
-      url: event.href ?? canonicalUrl,
-      location: {
-        "@type": "Place",
-        "@id": restaurantId,
-        name: businessProfile.name,
-        address: {
-          "@type": "PostalAddress",
-          ...businessProfile.address,
-        },
-      },
-      organizer: { "@id": restaurantId },
-    }));
-
-const faqGraphNodes = (route: RouteDefinition, canonicalUrl: string) => {
-  if (!route.content.faqs?.length) {
-    return [];
-  }
-
-  return [
-    {
-      "@type": "FAQPage",
-      "@id": `${canonicalUrl}#faq`,
-      mainEntity: route.content.faqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer,
-        },
       })),
     },
   ];
@@ -241,8 +185,6 @@ const buildJsonLdGraph = (
         about: { "@id": restaurantId },
       },
       ...menuGraphNodes(route, canonicalUrl),
-      ...eventGraphNodes(route, canonicalUrl, restaurantId),
-      ...faqGraphNodes(route, canonicalUrl),
     ],
   };
 };

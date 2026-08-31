@@ -25,7 +25,6 @@ const aliasEntries = [
 ];
 
 const routeEntries = [...canonicalEntries, ...aliasEntries];
-const verificationTime = Date.now();
 const homeHtml = await readOutput("index.html");
 const homeCanonical = extractSingle(
   homeHtml,
@@ -108,7 +107,7 @@ assertUnique(
   "canonical descriptions",
 );
 
-await assertFallback(basePath, `${homeCanonical}menu/`);
+await assertFallback(basePath);
 await assertCrawlFiles(homeCanonical);
 await assertHtmlFileCount(routeEntries.length + 1);
 await assertSsrBundleRemoved();
@@ -218,7 +217,7 @@ function assertStructuredData(html, htmlPath, renderPath, canonical, siteHome) {
 
   assertNoReviewSchema(document, htmlPath);
   assertMenuSchema(document, html, htmlPath, renderPath, canonical);
-  assertEventSchema(document, html, htmlPath, renderPath, canonical, restaurant["@id"]);
+  assertNoEventOrFaqSchema(document, htmlPath);
   assertSafeOutput(serialized, `${htmlPath} JSON-LD`);
 }
 
@@ -259,46 +258,15 @@ function assertMenuSchema(document, html, htmlPath, renderPath, canonical) {
   );
 }
 
-function assertEventSchema(document, html, htmlPath, renderPath, canonical, restaurantId) {
-  const events = collectTypedNodes(document, "Event");
-
-  if (renderPath !== "/events/") {
-    assert(events.length === 0, `${htmlPath} contains unsupported Event schema`);
-    return;
-  }
-
-  const visibleEvents = [...html.matchAll(/<article\b([^>]*)>/gu)]
-    .map((match) => ({
-      id: readAttribute(match[1], "data-event-id"),
-      startDate: readAttribute(match[1], "data-event-start"),
-      endDate: readAttribute(match[1], "data-event-end"),
-    }))
-    .filter((event) => event.id && event.startDate);
-
-  assert(events.length === visibleEvents.length, `${htmlPath} Event schema does not match visible events`);
-
-  for (const event of events) {
-    const idPrefix = `${canonical}#event-`;
-    const eventId = event["@id"]?.startsWith(idPrefix)
-      ? event["@id"].slice(idPrefix.length)
-      : undefined;
-    const visibleEvent = visibleEvents.find((candidate) => candidate.id === eventId);
-
-    assert(visibleEvent, `${htmlPath} contains unsupported Event ${event["@id"] ?? "without an ID"}`);
-    assert(event.startDate === visibleEvent.startDate, `${htmlPath} Event startDate is unsupported`);
-    assert(event.endDate === visibleEvent.endDate, `${htmlPath} Event endDate is unsupported`);
-    assert(typeof event.name === "string" && html.includes(escapeHtml(event.name)), `${htmlPath} Event name is not visible`);
-    assert(typeof event.description === "string" && html.includes(escapeHtml(event.description)), `${htmlPath} Event description is not visible`);
-    assert(typeof event.url === "string" && event.url.length > 0, `${htmlPath} Event URL is missing`);
-    assert(event.location?.["@id"] === restaurantId, `${htmlPath} Event location is unsupported`);
-
-    const activeUntil = event.endDate ?? event.startDate;
-    assert(
-      Number.isFinite(new Date(activeUntil).getTime()) &&
-        new Date(activeUntil).getTime() > verificationTime,
-      `${htmlPath} contains an expired or invalid Event`,
-    );
-  }
+function assertNoEventOrFaqSchema(document, htmlPath) {
+  assert(
+    collectTypedNodes(document, "Event").length === 0,
+    `${htmlPath} contains Event schema`,
+  );
+  assert(
+    collectTypedNodes(document, "FAQPage").length === 0,
+    `${htmlPath} contains FAQPage schema`,
+  );
 }
 
 function assertNoReviewSchema(document, htmlPath) {
@@ -389,24 +357,29 @@ function assertSafeOutput(value, label) {
   );
 }
 
-async function assertFallback(expectedBasePath, expectedCanonical) {
+async function assertFallback(expectedBasePath) {
   const html = await readOutput("404.html");
-  const canonical = extractSingle(
-    html,
-    /<link rel="canonical" href="([^"]+)"/gu,
-    "404 canonical",
-  );
+  const expectedHomeHref = expectedBasePath;
   const expectedMenuHref = `${expectedBasePath}menu/`;
+  const expectedContactHref = `${expectedBasePath}contact/`;
 
-  assert(canonical === expectedCanonical, `404 canonical is ${canonical}`);
+  assert(!/<link rel="canonical"/u.test(html), "404 must not contain a canonical URL");
   assert(
-    html.includes(`href="${expectedMenuHref}">View the Menu</a>`),
-    `404 does not contain the direct ${expectedMenuHref} link`,
+    html.includes(`href="${expectedHomeHref}">Home</a>`),
+    `404 does not contain the direct ${expectedHomeHref} Home link`,
+  );
+  assert(
+    html.includes(`href="${expectedMenuHref}">Menu</a>`),
+    `404 does not contain the direct ${expectedMenuHref} Menu link`,
+  );
+  assert(
+    html.includes(`href="${expectedContactHref}">Contact</a>`),
+    `404 does not contain the direct ${expectedContactHref} Contact link`,
   );
   assert(html.includes('content="noindex, follow"'), "404 must remain noindex, follow");
-  assert(html.includes('startsWith("/tags/")'), "404 script does not handle /tags/*");
-  assert(html.includes('startsWith("/places/")'), "404 script does not handle /places/*");
-  assert(html.includes('targetRoute = isLegacyTaxonomy ? "/menu/" : "/"'), "404 destinations are not deterministic");
+  assert(html.includes("<title>Page Not Found | Aroma Gastrobar</title>"), "404 title is not helpful");
+  assert(!/<script\b/iu.test(html), "404 must not force a JavaScript redirect");
+  assert(!html.includes("window.location"), "404 must not redirect with JavaScript");
   assert(!html.includes("__AROMA_"), "404 retains a build placeholder");
 }
 
