@@ -1,0 +1,7 @@
+interface:
+  display_name: "Aroma Poster Director"
+  short_description: "Create cohesive Aroma event posters"
+  brand_color: "#c7a26a"
+  default_prompt: "Use $aroma-poster-director to art-direct an Instagram-ready Aroma event poster."
+policy:
+  allow_implicit_invocation: true
